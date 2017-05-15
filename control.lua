@@ -39,6 +39,15 @@ local function locate_slaves(master_pos)
 end
 
 local function wipe_chunk(surface, pos)
+  -- blank tiles
+  local tiles = {}
+  for dx = 0,31 do
+    for dy = 0,31 do
+      tiles[#tiles+1] = {name= "out-of-map", position= {x= pos.x+dx, y= pos.y+dy}}
+    end
+  end
+  surface.set_tiles(tiles)
+
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
   for _, entity in ipairs(entities) do
@@ -51,15 +60,6 @@ local function wipe_chunk(surface, pos)
       --TODO handle destroy failures
     end
   end
-
-  -- blank tiles
-  local tiles = {}
-  for dx = 0,31 do
-    for dy = 0,31 do
-      tiles[#tiles+1] = {name= "out-of-map", position= {x= pos.x+dx, y= pos.y+dy}}
-    end
-  end
-  surface.set_tiles(tiles)
 
   -- remove decoratives
   surface.destroy_decoratives({pos, {pos.x+32, pos.y+32}})
@@ -92,8 +92,12 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
   for _, entity in ipairs(master_entities) do
     if entity.position.x ~= master_pos.x+32 and entity.position.y ~= master_pos.y+32 then
-      if entity.type ~= "character" and entity.type ~= "player" then
-        local amount = entity.type == "resource" and entity.amount or nil
+      if entity.type == "fish" or
+         entity.type == "tree" or
+         entity.type == "unit" or
+         entity.type == "resource" or
+         entity.type == "simple-entity" or
+         false then -- makes above lines more diff-friendly
         surface.create_entity{
           name= entity.name,
           position= {
@@ -103,8 +107,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
           direction= entity.direction,
           force= entity.force,
           -- TODO: more thorough cloning
-          -- type-specific parameters
-          amount= amount,
+          -- entity-type-specific parameters
+          amount= entity.type == "resource" and entity.amount or nil,
         }
       end
     end
