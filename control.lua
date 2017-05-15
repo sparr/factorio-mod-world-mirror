@@ -1,12 +1,12 @@
-local function debug(...)
-  if game and game.players[1] then
-    game.players[1].print("DEBUG: " .. serpent.line(...,{comment=false}))
-  end
-end
+-- local function debug(...)
+--   if game and game.players[1] then
+--     game.players[1].print("DEBUG: " .. serpent.line(...,{comment=false}))
+--   end
+-- end
 
-local function pos2s(pos)
-  return "(" .. pos.x .. "," .. pos.y .. ")"
-end
+-- local function pos2s(pos)
+--   return "(" .. pos.x .. "," .. pos.y .. ")"
+-- end
 
 local world_mirror_x = settings.global['world-mirror-x'].value
 local world_mirror_y = settings.global['world-mirror-y'].value
@@ -123,7 +123,7 @@ local function on_chunk_generated(event)
 
   if (world_mirror_x and p1.x < -coord_offset) or (world_mirror_y and p1.y < -coord_offset) then
     -- slave
-    if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
+    -- if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
     local master_pos = locate_master(p1)
     wipe_chunk(surface, p1)
     if surface.is_chunk_generated({x=math.floor(master_pos.x/32), y=math.floor(master_pos.y/32)}) then
@@ -133,10 +133,10 @@ local function on_chunk_generated(event)
     end
   else
     -- master
-    if p1.y==-coord_offset then debug("master chunk at " .. pos2s(p1)) end
+    -- if p1.y==-coord_offset then debug("master chunk at " .. pos2s(p1)) end
     local slaves = locate_slaves(p1)
     for _,slave_pos in ipairs(slaves) do
-      if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
+      -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
       if surface.is_chunk_generated({x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}) then
         wipe_chunk(surface, slave_pos)
       end
