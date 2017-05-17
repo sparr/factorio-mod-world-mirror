@@ -29,10 +29,10 @@ local function locate_slaves(master_pos)
   if world_mirror_x and master_pos.x >= -coord_offset then
     slaves[#slaves+1] = {x=-2*coord_offset-master_pos.x-32, y=master_pos.y}
   end
-  if world_mirror_y and master_pos.y >= 0 then
+  if world_mirror_y and master_pos.y >= -coord_offset then
     slaves[#slaves+1] = {x=master_pos.x, y=-2*coord_offset-master_pos.y-32}
   end
-  if world_mirror_x and world_mirror_y and master_pos.x >= 0 and master_pos.y >= 0 then
+  if world_mirror_x and world_mirror_y and master_pos.x >= -coord_offset and master_pos.y >= -coord_offset then
     slaves[#slaves+1] = {x=-2*coord_offset-master_pos.x-32, y=-2*coord_offset-master_pos.y-32}
   end
   return slaves
@@ -87,7 +87,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
       tiles[#tiles+1] = {name= tilename, position= {x= slave_pos.x + dx*slave_dx, y= slave_pos.y + dy*slave_dy}}
     end
   end
-  surface.set_tiles(tiles)
+  local tile_correction = false -- causes problems with deep water
+  surface.set_tiles(tiles, tile_correction)
 
   -- clone entities
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
@@ -99,6 +100,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
          entity.type == "resource" or
          entity.type == "unit-spawner" or
          entity.type == "simple-entity" or
+         ( entity.type == "turret" and entity.prototype.subgroup.name == "enemies" ) or
          false then -- makes above lines more diff-friendly
         surface.create_entity{
           name= entity.name,
