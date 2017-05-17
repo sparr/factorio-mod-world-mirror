@@ -46,7 +46,8 @@ local function wipe_chunk(surface, pos)
       tiles[#tiles+1] = {name= "out-of-map", position= {x= pos.x+dx, y= pos.y+dy}}
     end
   end
-  surface.set_tiles(tiles)
+  local tile_correction = false -- causes problems with deep water
+  surface.set_tiles(tiles, tile_correction)
 
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
@@ -96,6 +97,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
          entity.type == "tree" or
          entity.type == "unit" or
          entity.type == "resource" or
+         entity.type == "unit-spawner" or
          entity.type == "simple-entity" or
          false then -- makes above lines more diff-friendly
         surface.create_entity{
