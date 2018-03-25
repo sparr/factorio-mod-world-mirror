@@ -1,11 +1,11 @@
 {
   "name": "world-mirror",
-  "version": "0.15.3",
+  "version": "0.16.0",
   "title": "World Mirror",
   "author": "Sparr",
   "homepage": "http://github.com/sparr/factorio-mod-world-mirror",
   "contact": "sparr0@gmail.com",
   "description": "Mirrors the world map north/south and/or east/west.",
-  "dependencies": ["base >= 0.15.0"],
-  "factorio_version": "0.15"
+  "dependencies": ["base >= 0.16.0"],
+  "factorio_version": "0.16"
 }

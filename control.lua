@@ -87,7 +87,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
       tiles[#tiles+1] = {name= tilename, position= {x= slave_pos.x + dx*slave_dx, y= slave_pos.y + dy*slave_dy}}
     end
   end
-  local tile_correction = false -- causes problems with deep water
+  local tile_correction = true -- causes problems with deep water
   surface.set_tiles(tiles, tile_correction)
 
   -- clone entities
@@ -97,6 +97,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
       if entity.type == "fish" or
          entity.type == "tree" or
          entity.type == "unit" or
+         entity.type == "cliff" or
          entity.type == "resource" or
          entity.type == "unit-spawner" or
          entity.type == "simple-entity" or
