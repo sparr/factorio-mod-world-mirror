@@ -144,6 +144,16 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   end
 
   --TODO clone decoratives
+  -- temp solution is to just regenerate new decoratives instead
+  -- get a list of all known autoplace-able decorative names
+  local decorative_names = {}
+  for k,v in pairs(game.decorative_prototypes) do
+    if v.autoplace_specification then
+      decorative_names[#decorative_names+1] = k
+    end
+  end
+  -- apply them all to this chunk
+  surface.regenerate_decorative(decorative_names, {{x=math.floor(slave_pos.x/32),y=math.floor(slave_pos.y/32)}})
 end
 
 local function on_chunk_generated(event)
