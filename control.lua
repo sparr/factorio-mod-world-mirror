@@ -67,14 +67,18 @@ local function wipe_chunk(surface, pos)
 end
 
 local function mirror_chunk(surface, master_pos, slave_pos)
+  -- which direction(s) are we mirroring?
+  local mirror_x = slave_pos.x ~= master_pos.x
+  local mirror_y = slave_pos.y ~= master_pos.y
+
   -- calculate slave origin and direction
   local slave_dx = 1
   local slave_dy = 1
-  if slave_pos.x < master_pos.x then
+  if mirror_x then
     slave_dx = -1
     slave_pos.x = slave_pos.x + 31
   end
-  if slave_pos.y < master_pos.y then
+  if mirror_y then
     slave_dy = -1
     slave_pos.y = slave_pos.y + 31
   end
@@ -103,18 +107,38 @@ local function mirror_chunk(surface, master_pos, slave_pos)
          entity.type == "simple-entity" or
          ( entity.type == "turret" and entity.prototype.subgroup.name == "enemies" ) or
          false then -- makes above lines more diff-friendly
+        local cliff_orientation
+        if entity.type == "cliff" then
+          cliff_orientation = entity.cliff_orientation
+          if mirror_x then
+            cliff_orientation = cliff_orientation:gsub("[we][ea]st",{east="west",west="east"})
+          end
+          if mirror_y then
+            cliff_orientation = cliff_orientation:gsub("[ns]o[ru]th",{north="south",south="north"})
+          end
+          -- -- SO CLOSE!!
+          if (mirror_x or mirror_y) and not (mirror_x and mirror_y) then
+            cliff_orientation = cliff_orientation:gsub("^(%w%w%w%w%w?)%-to%-(%w%w%w%w%w?)$","%2-to-%1")
+          end
+        end
+        local new_x = (entity.position.x - master_pos.x) * slave_dx + slave_pos.x + (mirror_x and 1 or 0)
+        local new_y = (entity.position.y - master_pos.y) * slave_dy + slave_pos.y + (mirror_y and 0 or 1)
         surface.create_entity{
           name= entity.name,
           position= {
-            x= (entity.position.x - master_pos.x) * slave_dx + slave_pos.x + (master_pos.x > slave_pos.x and 1 or 0),
-            y= (entity.position.y - master_pos.y) * slave_dy + slave_pos.y + (master_pos.y > slave_pos.y and 1 or 0)
+            x= new_x,
+            y= new_y
           },
           direction= entity.direction,
           force= entity.force,
           -- TODO: more thorough cloning
           -- entity-type-specific parameters
           amount= entity.type == "resource" and entity.amount or nil,
+          cliff_orientation= cliff_orientation
         }
+        -- if entity.type == "cliff" then
+        --   debug("" .. new_x .. "," .. new_y .. " " .. entity.cliff_orientation .. "->" .. cliff_orientation)
+        -- end
       end
     end
   end
