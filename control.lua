@@ -52,13 +52,16 @@ local function wipe_chunk(surface, pos)
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
   for _, entity in ipairs(entities) do
-    if entity.type == "character" or entity.type == "player" then
-      -- need to move player to a legal place to stand or else they die
-      local dest = surface.find_non_colliding_position(entity.type, pos, 0, 1)
-      entity.teleport(dest)
-    else
-      entity.destroy()
-      --TODO handle destroy failures
+    -- attempt to avoid affecting entities not actually "on" this chunk
+    if entity.position.x >= pos.x and entity.position.x < pos.x+32 and entity.position.y >= pos.y and entity.position.y < pos.y+32 then 
+      if entity.type == "character" or entity.type == "player" then
+        -- need to move player to a legal place to stand or else they die
+        local dest = surface.find_non_colliding_position(entity.type, pos, 0, 1)
+        entity.teleport(dest)
+      else
+        entity.destroy()
+        --TODO handle destroy failures
+      end
     end
   end
 
@@ -98,7 +101,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
   -- local new_entities = {}
   for _, entity in ipairs(master_entities) do
-    if entity.position.x ~= master_pos.x+32 and entity.position.y ~= master_pos.y+32 then
+    -- attempt to avoid affecting entities not actually "on" this chunk
+    if entity.position.x >= master_pos.x and entity.position.x < master_pos.x+32 and entity.position.y >= master_pos.y and entity.position.y < master_pos.y+32 then 
       if entity.type == "fish" or
          entity.type == "tree" or
          entity.type == "unit" or
@@ -124,7 +128,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
         end
         local new_x = (entity.position.x - master_pos.x) * slave_dx + slave_pos.x + (mirror_x and 1 or 0)
         local new_y = (entity.position.y - master_pos.y) * slave_dy + slave_pos.y + (mirror_y and 1 or 0)
-        new_entities[#new_entities+1] = surface.create_entity{
+        -- new_entities[#new_entities+1] = surface.create_entity{
+        surface.create_entity{
           name= entity.name,
           position= {
             x= new_x,
