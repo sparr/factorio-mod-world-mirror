@@ -96,6 +96,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
 
   -- clone entities
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
+  -- local new_entities = {}
   for _, entity in ipairs(master_entities) do
     if entity.position.x ~= master_pos.x+32 and entity.position.y ~= master_pos.y+32 then
       if entity.type == "fish" or
@@ -122,8 +123,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
           end
         end
         local new_x = (entity.position.x - master_pos.x) * slave_dx + slave_pos.x + (mirror_x and 1 or 0)
-        local new_y = (entity.position.y - master_pos.y) * slave_dy + slave_pos.y + (mirror_y and 0 or 1)
-        surface.create_entity{
+        local new_y = (entity.position.y - master_pos.y) * slave_dy + slave_pos.y + (mirror_y and 1 or 0)
+        new_entities[#new_entities+1] = surface.create_entity{
           name= entity.name,
           position= {
             x= new_x,
@@ -142,6 +143,11 @@ local function mirror_chunk(surface, master_pos, slave_pos)
       end
     end
   end
+
+  -- -- in progress efforts to resolve cliff problems
+  -- for _, entity in ipairs(new_entities) do
+  --   entity.update_connections() -- to fix cliff connections
+  -- end
 
   --TODO clone decoratives
   -- temp solution is to just regenerate new decoratives instead
@@ -179,12 +185,13 @@ local function on_chunk_generated(event)
     -- if p1.y==-coord_offset then debug("master chunk at " .. pos2s(p1)) end
     local slaves = locate_slaves(p1)
     for _,slave_pos in ipairs(slaves) do
+      local slave_chunk_pos = {x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}
       -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
-      if surface.is_chunk_generated({x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}) then
+      if surface.is_chunk_generated(slave_chunk_pos) then
         wipe_chunk(surface, slave_pos)
       end
       mirror_chunk(surface, p1, slave_pos)
-      surface.set_chunk_generated_status(slave_pos, defines.chunk_generated_status.entities)
+      surface.set_chunk_generated_status(slave_chunk_pos, defines.chunk_generated_status.entities)
     end
   end
 end
