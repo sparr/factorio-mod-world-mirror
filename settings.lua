@@ -25,5 +25,5 @@ data:extend(
       default_value = 4,
       min_value = 0
     },
-  }
+  } --[=[@as data.AnyModSetting[]]=]
 )
