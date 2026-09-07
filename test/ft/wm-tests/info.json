@@ -1,0 +1,14 @@
+{
+  "name": "wm-tests",
+  "version": "0.0.1",
+  "title": "World Mirror test marker",
+  "author": "Sparr",
+  "contact": "sparr0@gmail.com",
+  "homepage": "https://github.com/sparr/factorio-mod-world-mirror/tree/master/test/ft/wm-tests",
+  "factorio_version": "2.1",
+  "description": "Marks a game as running the World Mirror test suite. Holds no prototypes: it exists so control.lua can tell a test run from a player's game, since info.json keeps test/ out of the published package and the fixtures would not be there to require. Published with the mod's source on GitHub, but never to the mod portal.",
+  "dependencies": [
+    "base",
+    "world-mirror"
+  ]
+}

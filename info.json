@@ -6,5 +6,16 @@
   "homepage": "http://github.com/sparr/factorio-mod-world-mirror",
   "contact": "sparr0@gmail.com",
   "description": "Mirrors the world map north/south and/or east/west.",
-  "factorio_version": "2.1"
+  "factorio_version": "2.1",
+  "package": {
+    "ignore": [
+      "test/**",
+      "node_modules/**",
+      "package.json",
+      "package-lock.json",
+      "factorio-test.json",
+      ".busted",
+      ".luarocks/**"
+    ]
+  }
 }

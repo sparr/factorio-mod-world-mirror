@@ -149,9 +149,11 @@ end
 ---the platform out from under whoever is standing on it. A scripted surface is nobody's
 ---world to mirror either. Planets other than nauvis are fair game -- they are generated
 ---worlds, and mirroring the world is what this mod is for.
+---Global, as set_times is in axial-tilt, so the test tier can drive the real predicate
+---rather than reimplementing it.
 ---@param surface LuaSurface
 ---@return boolean
-local function is_a_world(surface)
+function is_a_world(surface)
   return surface.planet ~= nil and surface.platform == nil
 end
 
@@ -194,3 +196,14 @@ local function on_chunk_generated(event)
 end
 
 script.on_event(defines.events.on_chunk_generated, on_chunk_generated)
+--- The integration tier, which runs inside a live game rather than against nothing.
+--- wm-tests is never published, so this can never fire on a player's machine -- which
+--- matters, because info.json keeps test/ out of the package.
+if script.active_mods["factorio-test"] and script.active_mods["wm-tests"] then
+    require("__factorio-test__/init")({
+        "test.ft.mirroring",
+    }, {
+        load_luassert = true,
+        game_speed = 100,
+    })
+end
