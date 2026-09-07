@@ -4,11 +4,36 @@
 --- chunk is written by generating its master and there is no undoing that.
 local world = {}
 
---- The settings the mod is running with. It reads them once at load, so these are the
---- shipped defaults and a fixture cannot change them -- which is itself a 2.1.2 matter.
+--- The shipped defaults, which every fixture but the settings one runs against.
 world.MIRROR_X = true
 world.MIRROR_Y = false
 world.COORD_OFFSET = 4 * 32
+
+local SETTINGS = {
+    mirror_x = "world-mirror-x",
+    mirror_y = "world-mirror-y",
+    chunk_offset = "world-mirror-chunk-offset",
+}
+
+---The settings as they stand, to be handed back to world.restore. Fixtures may write
+---them because they register from the mod itself; a mod may only change its own.
+function world.snapshot()
+    local saved = {}
+    for key, name in pairs(SETTINGS) do saved[key] = settings.global[name].value end
+    return saved
+end
+
+function world.restore(saved)
+    for key, name in pairs(SETTINGS) do settings.global[name] = { value = saved[key] } end
+end
+
+---@param values table mirror_x, mirror_y, chunk_offset -- any subset
+function world.configure(values)
+    for key, value in pairs(values) do
+        assert(SETTINGS[key], "no such setting: " .. key)
+        settings.global[SETTINGS[key]] = { value = value }
+    end
+end
 
 local next_chunk = 9
 local next_row = 0

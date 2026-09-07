@@ -10,10 +10,16 @@ local mirror = require("lib.mirror")
 --   return "(" .. pos.x .. "," .. pos.y .. ")"
 -- end
 
-local world_mirror_x = settings.global['world-mirror-x'].value
-local world_mirror_y = settings.global['world-mirror-y'].value
-local chunk_offset = settings.global['world-mirror-chunk-offset'].value
-local coord_offset = chunk_offset * 32
+---The mod's settings, read where they are used rather than once when the file loads.
+---Loading them once meant changing an axis or the offset during a game did nothing until
+---the save was reloaded -- and worse, left a client who joined after the change working
+---from different numbers than everyone already playing.
+---@return boolean mirror_x, boolean mirror_y, number coord_offset in tiles
+local function current_settings()
+  return settings.global['world-mirror-x'].value --[[@as boolean]],
+         settings.global['world-mirror-y'].value --[[@as boolean]],
+         settings.global['world-mirror-chunk-offset'].value --[[@as number]] * 32
+end
 
 local function wipe_chunk(surface, pos)
   -- blank tiles
@@ -158,6 +164,7 @@ function is_a_world(surface)
 end
 
 local function on_chunk_generated(event)
+  local world_mirror_x, world_mirror_y, coord_offset = current_settings()
   if not world_mirror_x and not world_mirror_y then
     return
   end

@@ -124,3 +124,40 @@ describe("which surfaces count as worlds", function()
             "the mod reached across the line on a surface that is not a world")
     end)
 end)
+
+describe("the settings", function()
+    local saved
+    before_each(function() saved = world.snapshot() end)
+    after_each(function() world.restore(saved) end)
+
+    test("are read when a chunk generates, not once when the file loaded", function()
+        -- Loading them once meant a change during a game did nothing until reload, and
+        -- left a joining client working from different numbers than the host.
+        local surface = world.terrain()
+        world.configure({ mirror_y = true })
+
+        -- with the Y axis on, a master chunk gains a north/south reflection it would not
+        -- otherwise have; pick one north of the Y line so it has one
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local reflected_y = -2 * world.COORD_OFFSET - master.y - 32
+        local slave = { x = master.x, y = reflected_y }
+        assert.is_true(surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 }),
+            "turning on the Y axis mid-game had no effect")
+
+        local matched, mismatched = 0, 0
+        for dx = 0, 31 do
+            for dy = 0, 31 do
+                if surface.get_tile(master.x + dx, master.y + dy).name
+                    == surface.get_tile(slave.x + dx, slave.y + 31 - dy).name then
+                    matched = matched + 1
+                else
+                    mismatched = mismatched + 1
+                end
+            end
+        end
+        assert.equals(0, mismatched)
+        assert.equals(1024, matched)
+    end)
+end)
