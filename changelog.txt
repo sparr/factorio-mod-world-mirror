@@ -1,6 +1,14 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.3
 Date: ????
+  Bugfixes:
+    - What you have built is no longer destroyed when a chunk is mirrored. A chunk on the
+      far side of a mirror line is blanked while it waits for its partner to be generated,
+      and anything standing there when the copy finally arrives was being wiped along with
+      the blank ground. The PVP scenario walks straight into this: it generates each team's
+      chunks and then builds their base, so a base could be built during that wait and die
+      when the copy landed. Reported as issue #1. The terrain is still mirrored either way,
+      so both halves of the map continue to match.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.2
 Date: 2026-09-07

@@ -210,6 +210,73 @@ describe("all four quadrants at once", function()
     end)
 end)
 
+describe("a chunk somebody has built in", function()
+    test("keeps what was built", function()
+        -- Issue #1: the PVP scenario generates each team's chunks, then builds its silo,
+        -- turrets and walls. A base west of the line survives that, and then dies the
+        -- moment its master chunk east of the line is generated -- which happens as soon
+        -- as anyone walks that way.
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        local slave = world.reflection_of(master)
+
+        -- the slave exists first, as a team's starting area does
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+        surface.destroy_decoratives({ area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } } })
+        for _, entity in pairs(surface.find_entities({ { slave.x, slave.y },
+                                                       { slave.x + 32, slave.y + 32 } })) do
+            if entity.valid and entity.type ~= "character" then entity.destroy() end
+        end
+
+        local base = surface.create_entity({
+            name = "steel-chest", position = { slave.x + 16.5, slave.y + 16.5 }, force = "player" })
+        assert.is_not_nil(base, "setup: could not build in the slave chunk")
+
+        -- and now somebody walks east and generates its master
+        world.generate(surface, master)
+
+        assert.is_true(base.valid, "the mod destroyed something somebody had built")
+        assert.equals(1, surface.count_entities_filtered({
+            area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
+            name = "steel-chest" }))
+    end)
+
+    test("still has the same terrain as its partner", function()
+        -- The point of the mod is that both halves match. Skipping a built-in chunk must
+        -- not cost that: the chunk should already hold its mirrored terrain by the time
+        -- anyone can build in it, so refusing to redo the copy changes nothing.
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        local slave = world.reflection_of(master)
+
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+        local base = surface.create_entity({
+            name = "steel-chest", position = { slave.x + 16.5, slave.y + 16.5 }, force = "player" })
+        assert.is_not_nil(base, "setup: could not build in the slave chunk")
+
+        world.generate(surface, master)
+
+        assert.is_true(base.valid, "the base did not survive")
+        local matched, mismatched, out_of_map, first = world.compare(surface, master, slave)
+        assert.equals(0, out_of_map, "the chunk was left blank")
+        assert.equals(0, mismatched, "terrain no longer matches: " .. tostring(first))
+        assert.equals(1024, matched)
+    end)
+
+    test("is mirrored when only the map generator has been there", function()
+        -- the guard must not stop ordinary mirroring: trees and rocks are nobody's work
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local matched, mismatched = world.compare(surface, master, world.reflection_of(master))
+        assert.equals(0, mismatched)
+        assert.equals(1024, matched)
+    end)
+end)
+
 describe("which surfaces count as worlds", function()
     test("nauvis does", function()
         assert.is_true(is_a_world(world.nauvis()))
@@ -267,9 +334,11 @@ describe("the settings", function()
         local surface = world.terrain()
         world.configure({ mirror_y = true })
 
-        -- with the Y axis on, a master chunk gains a north/south reflection it would not
-        -- otherwise have; pick one north of the Y line so it has one
-        local master = world.claim(surface)
+        -- With the Y axis on, a master gains a north/south reflection -- but only if it
+        -- is north of the Y line. claim() walks rows either side of it, so ask until it
+        -- hands back one that qualifies.
+        local master
+        repeat master = world.claim(surface) until master.y >= -world.COORD_OFFSET
         world.generate(surface, master)
 
         local reflected_y = -2 * world.COORD_OFFSET - master.y - 32

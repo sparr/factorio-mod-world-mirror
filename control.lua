@@ -21,6 +21,20 @@ local function current_settings()
          settings.global['world-mirror-chunk-offset'].value --[[@as number]] * 32
 end
 
+---Did somebody build this, rather than the map generator growing it?
+---
+---A chunk west of the line is blanked to out-of-map while it waits for its partner to be
+---generated, and anything built during that wait -- a PVP team's starting base, most of
+---all -- is standing there when the copy finally arrives. The terrain still has to be
+---mirrored, or the two halves stop matching, so what survives the wipe is the built
+---things rather than the chunk.
+---@param entity LuaEntity
+---@return boolean
+local function is_someones_work(entity)
+  local force = entity.force.name
+  return force ~= "neutral" and force ~= "enemy"
+end
+
 local function wipe_chunk(surface, pos)
   -- blank tiles
   local tiles = {}
@@ -30,7 +44,9 @@ local function wipe_chunk(surface, pos)
     end
   end
   local tile_correction = false -- causes problems with deep water
-  surface.set_tiles(tiles, tile_correction)
+  -- do not let blanking the tiles take the built things with it; the mirrored tiles below
+  -- are laid with collision handling on, so anything the new ground cannot hold still goes
+  surface.set_tiles(tiles, tile_correction, false, false)
 
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
@@ -41,6 +57,8 @@ local function wipe_chunk(surface, pos)
         -- need to move player to a legal place to stand or else they die
         local dest = surface.find_non_colliding_position(entity.type, pos, 0, 1)
         entity.teleport(dest)
+      elseif is_someones_work(entity) then
+        -- leave it standing: see is_someones_work
       else
         entity.destroy()
         --TODO handle destroy failures
