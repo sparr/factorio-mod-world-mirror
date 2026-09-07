@@ -341,6 +341,28 @@ describe("a chunk with a demolisher in it", function()
     end)
 end)
 
+describe("what makes a chunk fair to both sides", function()
+    test("worms are still recognised the way the mod recognises them", function()
+        -- The clone list takes a turret only when its subgroup reads "enemies", which is a
+        -- string written in 1.1. It is still true, and a worm that stopped matching would
+        -- silently leave one half of the map without its defences -- so say so here rather
+        -- than find out from a player.
+        for _, name in ipairs({ "small-worm-turret", "medium-worm-turret", "big-worm-turret" }) do
+            local worm = prototypes.entity[name]
+            assert.is_not_nil(worm, name .. " is gone")
+            assert.equals("turret", worm.type, name .. " is no longer a turret")
+            assert.equals("enemies", worm.subgroup.name,
+                name .. " left the enemies subgroup, so the mod stopped cloning it")
+        end
+    end)
+
+    test("nests and biters are types the mod clones", function()
+        -- the other half of the same assumption, for the entities that come with them
+        assert.equals("unit-spawner", prototypes.entity["biter-spawner"].type)
+        assert.equals("unit", prototypes.entity["small-biter"].type)
+    end)
+end)
+
 describe("which surfaces count as worlds", function()
     test("nauvis does", function()
         assert.is_true(is_a_world(world.nauvis()))
