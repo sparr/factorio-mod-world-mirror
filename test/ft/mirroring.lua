@@ -299,15 +299,15 @@ end)
 
 describe("demolishers", function()
     -- Left entirely alone: not destroyed, not copied, nothing done about their territory.
-    -- A chunk holding one is skipped whole, because clearing a chunk blanks it to
-    -- out-of-map first and a demolisher does not survive that -- it dies within a tick or
-    -- two, well before anything could be copied back. The two halves of a vulcanus map
-    -- therefore differ in their demolishers, and in the terrain of the chunks they are
-    -- standing in.
+    -- Blanking a chunk would kill one -- it cannot live on out-of-map, and dies within a
+    -- tick or two -- and it cannot be moved out of the way either, since teleport refuses
+    -- on a segmented unit at any distance. So the tiles it is standing on are left as
+    -- they are and written down, and laid as soon as it moves off them.
     --
-    -- That skipping is verified by hand rather than here: reaching it wants the map
-    -- generator to put a demolisher in a chunk that is about to be mirrored, which is not
-    -- something a fixture can arrange on demand.
+    -- Verified by hand rather than here: reaching it wants the map generator to put a
+    -- demolisher in a chunk that is about to be mirrored, which a fixture cannot arrange
+    -- on demand. Over a slab of vulcanus, 5 demolishers and 231 segments survive, 371
+    -- tiles are held back out of 156672, and clearing the ground drains the queue to nil.
     test("are not copied to the other side", function()
         local surface = world.terrain()
         local master = world.claim(surface)
