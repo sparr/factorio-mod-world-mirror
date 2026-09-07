@@ -167,8 +167,23 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   surface.regenerate_decorative(decorative_names, {{x=math.floor(slave_pos.x/32),y=math.floor(slave_pos.y/32)}})
 end
 
+---Only worlds the map generator made. Space age brought surfaces that are not worlds: a
+---space platform is a surface like any other, and wiping one of its chunks would delete
+---the platform out from under whoever is standing on it. A scripted surface is nobody's
+---world to mirror either. Planets other than nauvis are fair game -- they are generated
+---worlds, and mirroring the world is what this mod is for.
+---@param surface LuaSurface
+---@return boolean
+local function is_a_world(surface)
+  return surface.planet ~= nil and surface.platform == nil
+end
+
 local function on_chunk_generated(event)
   if not world_mirror_x and not world_mirror_y then
+    return
+  end
+
+  if not is_a_world(event.surface) then
     return
   end
 

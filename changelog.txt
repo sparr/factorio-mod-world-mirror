@@ -6,6 +6,11 @@ Date: 2026-09-07
   Bugfixes:
     - Stop crashing the moment a chunk is mirrored: 2.0 moved the prototype tables off
       game, so game.decorative_prototypes no longer exists
+    - Only mirror worlds the map generator made. Space age brought surfaces that are not
+      worlds, and this mod acted on every one of them: a space platform is a surface like
+      any other, and blanking a chunk of one would have deleted the platform out from
+      under whoever was standing on it. Other planets are still mirrored -- they are
+      worlds, and mirroring the world is the point.
 ---------------------------------------------------------------------------------------------------
 Version: 1.1.1
 Date: 2022-01-01
