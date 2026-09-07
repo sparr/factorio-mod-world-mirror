@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.5
-Date: ????
+Date: 2026-09-07
   Features:
     - In the PvP scenario the mirror lines are put on the teams automatically, whichever
       way the scenario laid them out, so every team's quarter of the map is the same
