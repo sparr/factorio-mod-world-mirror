@@ -167,3 +167,61 @@ describe("a line anywhere, on either axis", function()
         end
     end)
 end)
+
+describe("centre_of", function()
+    it("finds the midpoint of two spawns", function()
+        assert.same({ x = 0, y = 0 },
+            mirror.centre_of({ { x = -960, y = 0 }, { x = 960, y = 0 } }))
+    end)
+
+    it("finds it wherever the pair sits", function()
+        -- PVP puts its circle around a randomly chosen centre, nowhere near the origin
+        assert.same({ x = 320, y = -640 },
+            mirror.centre_of({ { x = 320 - 896, y = -640 - 256 },
+                               { x = 320 + 896, y = -640 + 256 } }))
+    end)
+
+    it("finds the centre of four spawns on a circle", function()
+        assert.same({ x = 0, y = 0 }, mirror.centre_of({
+            { x = -256, y = 896 }, { x = -896, y = -256 },
+            { x = 256, y = -896 }, { x = 896, y = 256 } }))
+    end)
+
+    it("has nothing to say about no spawns", function()
+        assert.is_nil(mirror.centre_of({}))
+    end)
+
+    it("comes out within half a chunk for every rotation PVP might pick", function()
+        -- Exact almost always, because the snapping is symmetric -- but not in floating
+        -- point: sin(30 degrees) is 0.49999999999999994, which snaps down a whole chunk
+        -- while its opposite snaps up. Half a chunk is the worst of it.
+        local function snap(v) return v > 0 and 32 * math.floor(v / 32) or 32 * math.ceil(v / 32) end
+        local centre = { x = 7 * 32, y = -11 * 32 }
+        local worst = 0
+        for degrees = 0, 359 do
+            for _, count in ipairs({ 2, 4 }) do
+                local spawns = {}
+                for k = 1, count do
+                    local angle = math.rad(degrees) + (k * 2 * math.pi / count)
+                    spawns[k] = {
+                        x = centre.x + snap(math.cos(angle) * 960),
+                        y = centre.y + snap(math.sin(angle) * 960),
+                    }
+                end
+                local found = mirror.centre_of(spawns)
+                worst = math.max(worst, math.abs(found.x - centre.x), math.abs(found.y - centre.y))
+            end
+        end
+        assert.is_true(worst <= 16, "worst error was " .. worst .. " tiles")
+    end)
+end)
+
+describe("on_chunk_boundary", function()
+    it("leaves a point already on one alone", function()
+        assert.same({ x = 320, y = -640 }, mirror.on_chunk_boundary({ x = 320, y = -640 }))
+    end)
+
+    it("moves one that is not back to the boundary before it", function()
+        assert.same({ x = 320, y = -672 }, mirror.on_chunk_boundary({ x = 340, y = -641 }))
+    end)
+end)
