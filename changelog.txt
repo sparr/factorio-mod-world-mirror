@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.4
 Date: ????
+  Bugfixes:
+    - Fulgora's lightning attractors are mirrored. The map generator grows them among the
+      scrap, and they were not in the list of things this mod copies, so one half of the
+      map had them and the other did not.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.3
 Date: 2026-09-07

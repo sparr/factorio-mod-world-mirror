@@ -116,6 +116,8 @@ local function mirror_chunk(surface, master_pos, slave_pos)
          entity.type == "resource" or
          entity.type == "unit-spawner" or
          entity.type == "simple-entity" or
+         -- fulgora grows these among its scrap, eight or so to a chunk
+         entity.type == "lightning-attractor" or
          ( entity.type == "turret" and entity.prototype.subgroup.name == "enemies" ) or
          false then -- makes above lines more diff-friendly
         local cliff_orientation

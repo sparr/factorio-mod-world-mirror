@@ -106,6 +106,15 @@ function world.nauvis() return game.surfaces["nauvis"] end
 --- whether tiles reflect but useless for asking whether a tree does. Vulcanus is a real
 --- planet, so the mod treats it as a world, and the map generator puts rocks and
 --- decoratives on it.
+--- Fulgora, whose map generator grows lightning attractors among the scrap -- the only
+--- vanilla planet that generates something on a player force.
+---@return LuaSurface
+function world.fulgora()
+    local existing = game.surfaces["fulgora"]
+    if existing then return existing end
+    return game.planets["fulgora"].create_surface()
+end
+
 ---@return LuaSurface
 function world.terrain()
     local existing = game.surfaces["vulcanus"]

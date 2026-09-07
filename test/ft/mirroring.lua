@@ -363,6 +363,62 @@ describe("what makes a chunk fair to both sides", function()
     end)
 end)
 
+describe("fulgora's lightning attractors", function()
+    test("are copied to the reflection, in the mirrored places", function()
+        -- The map generator grows these, and they arrive on the player force, which is
+        -- the only vanilla case of that. They were not in the clone list, so one half of
+        -- the map had them and the other did not.
+        local surface = world.fulgora()
+        local master, slave = world.claim_with(surface, function(s, corner)
+            return s.count_entities_filtered({
+                area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } },
+                type = "lightning-attractor" }) > 0
+        end)
+
+        local function census(corner, reflect)
+            local at = {}
+            for _, e in pairs(surface.find_entities_filtered({
+                    area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } },
+                    type = "lightning-attractor" })) do
+                local dx = e.position.x - corner.x
+                if reflect then dx = 32 - dx end
+                at[("%.1f,%.1f"):format(dx, e.position.y - corner.y)] = e.name
+            end
+            return at
+        end
+
+        local on_master, on_slave = census(master, true), census(slave, false)
+        assert.is_true(next(on_master) ~= nil, "setup: no attractors in the master chunk")
+        assert.same(on_master, on_slave)
+    end)
+end)
+
+describe("a reflection reached before its partner", function()
+    test("is emptied, so it has nothing of its own left to duplicate", function()
+        -- This is why copying attractors cannot double them up. A chunk reached first is
+        -- blanked while it waits, and blanking takes everything with it -- including the
+        -- attractors the map generator had just grown there, which sit on the player force
+        -- and would otherwise be spared as somebody's work. Whatever the partner sends
+        -- later arrives into an empty chunk.
+        --
+        -- It also bounds what "keep what players build" means: things built during the
+        -- wait survive, things that were there before it do not.
+        local surface = world.fulgora()
+        local master = world.claim(surface)
+        local slave = world.reflection_of(master)
+
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        assert.equals(1024, surface.count_tiles_filtered({
+            area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
+            name = "out-of-map" }), "the waiting chunk was not blanked")
+        assert.equals(0, #surface.find_entities({ { slave.x, slave.y },
+                                                  { slave.x + 32, slave.y + 32 } }),
+            "something survived in the waiting chunk and could be duplicated later")
+    end)
+end)
+
 describe("which surfaces count as worlds", function()
     test("nauvis does", function()
         assert.is_true(is_a_world(world.nauvis()))
