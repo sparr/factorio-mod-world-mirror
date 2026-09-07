@@ -265,6 +265,26 @@ describe("a chunk somebody has built in", function()
         assert.equals(1024, matched)
     end)
 
+    test("tells built from grown by force, which is what the game does", function()
+        -- The rule is "not neutral and not enemy". It holds because the map generator
+        -- puts nothing on a player force: trees, rocks, fish, cliffs and ore are neutral,
+        -- units and nests are enemy. If that ever stops being true this goes red, rather
+        -- than the mod quietly sparing scenery or destroying somebody's factory.
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local wrong = {}
+        for _, entity in pairs(surface.find_entities({ { master.x, master.y },
+                                                       { master.x + 32, master.y + 32 } })) do
+            local force = entity.force.name
+            if force ~= "neutral" and force ~= "enemy" then
+                wrong[#wrong + 1] = entity.type .. " on force " .. force
+            end
+        end
+        assert.same({}, wrong)
+    end)
+
     test("is mirrored when only the map generator has been there", function()
         -- the guard must not stop ordinary mirroring: trees and rocks are nobody's work
         local surface = world.terrain()
