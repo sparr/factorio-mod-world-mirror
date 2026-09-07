@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.1
+Date: 2026-09-07
+  Other:
+    - Add a test suite: 18 busted specs for the chunk coordinate maths, 7 factorio-test
+      fixtures for what a real game does with them. One fixture is red on purpose,
+      recording that a reflected chunk gets no decoratives.
+    - Split those coordinates out into lib/mirror.lua so they can be tested without a game
+---------------------------------------------------------------------------------------------------
 Version: 2.1.0
 Date: 2026-09-07
   Other:
