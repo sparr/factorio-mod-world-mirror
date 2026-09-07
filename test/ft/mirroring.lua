@@ -1,5 +1,6 @@
 --- What a real game does when a chunk is generated.
 local world = require("test.ft.world")
+local mirror = require("lib.mirror")
 
 describe("a generated chunk", function()
     test("gets a reflection whose tiles match, reversed", function()
@@ -661,6 +662,63 @@ describe("following the PVP scenario", function()
             end
             assert.equals(0, mismatched, ("quadrant %d does not match the master"):format(index))
         end
+    end)
+
+    test("follows a three team round too, which no pairing divides neatly", function()
+        -- Three teams cannot each have a quadrant, so some share one and no two are an
+        -- exact match. Every team still draws from the same quarter of terrain, which is
+        -- the whole of what mirroring can offer here.
+        local surface = world.terrain()
+        local centre = { x = 300 * 32, y = -12 * 32 }
+        pretend_pvp(surface, centre, 30 * 32, 3)
+        world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
+
+        -- Three offsets 120 degrees apart cancel exactly in real arithmetic, but each is
+        -- snapped towards a chunk boundary first, so the average can be a chunk off the
+        -- true centre. That does not matter here -- wherever the lines land, all four
+        -- quadrants still carry the same ground, and no pairing was going to be exact.
+        -- What matters is that the lines went to the teams and not to the settings.
+        local spawns = {}
+        for index = 1, 3 do
+            spawns[index] = game.forces["pvp-team-" .. index].get_spawn_position(surface)
+        end
+        local lines = mirror.on_chunk_boundary(mirror.centre_of(spawns))
+
+        local master = { x = centre.x + 4 * 32, y = centre.y + 9 * 32 }
+        surface.request_to_generate_chunks({ master.x + 16, master.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        local from_settings = { x = 2 * (-4 * 32) - master.x - 32, y = master.y }
+        assert.is_false(surface.is_chunk_generated(
+            { x = from_settings.x / 32, y = from_settings.y / 32 }),
+            "the settings' lines were used instead of the teams'")
+
+        local slave = { x = 2 * lines.x - master.x - 32, y = master.y }
+        assert.is_true(surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 }),
+            "the lines were not put on the teams")
+        local mismatched = 0
+        for dx = 0, 31 do
+            for dy = 0, 31 do
+                if surface.get_tile(master.x + dx, master.y + dy).name
+                    ~= surface.get_tile(slave.x + 31 - dx, slave.y + dy).name then
+                    mismatched = mismatched + 1
+                end
+            end
+        end
+        assert.equals(0, mismatched)
+    end)
+
+    test("leaves a single team alone, having nobody to be fair to", function()
+        local surface = world.terrain()
+        pretend_pvp(surface, { x = 400 * 32, y = 0 }, 30 * 32, 1)
+        world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
+
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local matched, mismatched = world.compare(surface, master, world.reflection_of(master))
+        assert.equals(0, mismatched, "a one team round was followed")
+        assert.equals(1024, matched)
     end)
 
     test("is ignored when the scenario is not running", function()

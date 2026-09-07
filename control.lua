@@ -39,8 +39,10 @@ local mirror = require("lib.mirror")
 ---while two and four stand 896 and 256. Not perfect fairness, but every team draws from
 ---the same quadrant of terrain rather than from four unrelated ones.
 ---
----Other counts are left alone, not because the copying would fail but because nobody has
----worked out what it is worth for them.
+---Any other count gets the same treatment. Three, five or six teams do not divide neatly
+---into four quadrants, so some share one and no pairing is exact -- but every team still
+---draws from the same quarter of terrain rather than from unrelated pieces of map, which
+---beats leaving it to chance. One team is left alone: there is nobody to be fair to.
 ---
 ---The reflection lands one tile off: it maps tile x to 2*line-1-x, so a spawn on a chunk
 ---boundary reflects to an odd tile and never onto the other spawn exactly. The terrain
@@ -58,7 +60,7 @@ local function pvp_lines(surface)
     if not force then return nil end
     spawns[#spawns + 1] = force.get_spawn_position(surface)
   end
-  if #spawns ~= 2 and #spawns ~= 4 then return nil end
+  if #spawns < 2 then return nil end
 
   local centre = mirror.centre_of(spawns)
   if not centre then return nil end

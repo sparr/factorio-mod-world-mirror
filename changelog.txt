@@ -2,12 +2,12 @@
 Version: 2.1.5
 Date: ????
   Features:
-    - In the PvP scenario with two or four teams, the mirror lines are put on the teams
-      automatically, whichever way the scenario laid them out. Two teams get identical
-      surroundings. With four, every team's quarter of the map is the same ground, and
-      teams opposite each other get identical surroundings, while the other pair stand in
-      a different spot on that same ground. Rounds with other team counts are left alone,
-      and the whole thing can be turned off.
+    - In the PvP scenario the mirror lines are put on the teams automatically, whichever
+      way the scenario laid them out, so every team's quarter of the map is the same
+      ground. Two teams get identical surroundings. With four, the teams opposite each
+      other do, and the other pair stand in a different spot on that same ground. Other
+      counts share quadrants and no pairing is exact, but every team has some shared
+      terrain with some other(s). Can be turned off.
   Changes:
     - The mirror lines can be put anywhere, and each axis has its own. The single chunk
       offset, which could only place both lines the same distance west and north of the
