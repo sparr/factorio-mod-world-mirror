@@ -6,6 +6,11 @@ Date: ????
       min_value, which is not a field, so nothing enforced it.
     - The X and Y axis settings describe the right halves of the map. Their descriptions
       were swapped: mirroring on X makes east and west match, not north and south.
+    - Decoratives are mirrored rather than grown afresh. They were regenerated from the
+      reflection's own noise, which was the standing TODO -- and since the regeneration
+      ran before the chunk was marked generated, it did nothing at all, so a mirrored
+      chunk came out bare. Now every decorative is copied to its reflected position, in
+      the same numbers.
     - Changing an axis or the chunk offset during a game now takes effect. The settings
       were read once when the mod loaded, so a change did nothing until the save was
       reloaded -- and a client who joined after one was working from different numbers

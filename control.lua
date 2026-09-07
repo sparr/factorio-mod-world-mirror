@@ -137,17 +137,27 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   --   entity.update_connections() -- to fix cliff connections
   -- end
 
-  --TODO clone decoratives
-  -- temp solution is to just regenerate new decoratives instead
-  -- get a list of all known autoplace-able decorative names
-  local decorative_names = {}
-  for k,v in pairs(prototypes.decorative) do
-    if v.autoplace_specification then
-      decorative_names[#decorative_names+1] = k
+  -- clone decoratives. Their positions are tile positions, so they reflect the way the
+  -- tiles above did and not the way the entities did -- no extra tile on the mirrored
+  -- axis. find_decoratives_filtered hands back the prototype rather than its name.
+  local mirrored_decoratives = {}
+  for _, decorative in pairs(surface.find_decoratives_filtered{
+      area = {master_pos, {master_pos.x+32, master_pos.y+32}}}) do
+    -- the same care the entity loop takes: an area query reaches past the chunk, and a
+    -- decorative on the far side of the edge belongs to its own chunk, not this one
+    if decorative.position.x >= master_pos.x and decorative.position.x < master_pos.x+32 and
+       decorative.position.y >= master_pos.y and decorative.position.y < master_pos.y+32 then
+      mirrored_decoratives[#mirrored_decoratives+1] = {
+        name = decorative.decorative.name,
+        position = {
+          x = (decorative.position.x - master_pos.x) * slave_dx + slave_pos.x,
+          y = (decorative.position.y - master_pos.y) * slave_dy + slave_pos.y,
+        },
+        amount = decorative.amount,
+      }
     end
   end
-  -- apply them all to this chunk
-  surface.regenerate_decorative(decorative_names, {{x=math.floor(slave_pos.x/32),y=math.floor(slave_pos.y/32)}})
+  surface.create_decoratives{check_collision=false, decoratives=mirrored_decoratives}
 end
 
 ---Only worlds the map generator made. Space age brought surfaces that are not worlds: a

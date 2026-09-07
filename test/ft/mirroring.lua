@@ -58,24 +58,32 @@ describe("a generated chunk", function()
             :format(missing, #originals, tostring(first)))
     end)
 
-    -- KNOWN FAILING, for 2.1.2. The reflected chunk comes back with no decoratives at
-    -- all, though the master it was copied from has plenty and the mod asks for them by
-    -- name. Fixing the crash in prototypes.decorative got the call running again; it did
-    -- not make the call do anything. Left red on purpose: the bug is real and outstanding,
-    -- and a test that goes green when it is fixed is worth more than a deleted one.
-    test("gets decoratives on the reflected side", function()
-        -- regenerating these is what game.decorative_prototypes used to crash on, so a
-        -- reflected chunk with none at all means the call quietly does nothing
+    test("carries its decoratives across, not merely some decoratives", function()
         local surface = world.terrain()
         local master, slave = world.claim_with(surface, function(s, corner)
             return #s.find_decoratives_filtered({
                 area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } } }) > 0
         end)
 
-        local decoratives = surface.find_decoratives_filtered({
-            area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } } })
-        assert.is_true(#decoratives > 0,
-            "the master chunk has decoratives and its reflection has none")
+        -- Every decorative, at its mirrored position, not merely the same tally: a
+        -- reflection generated from its own noise could match on counts by luck, and
+        -- would not match on where each one sits.
+        local function census(corner, reflect)
+            local at = {}
+            for _, d in pairs(surface.find_decoratives_filtered({
+                    area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } } })) do
+                local dx, dy = d.position.x - corner.x, d.position.y - corner.y
+                -- an area query reaches past the chunk edge; those belong to a neighbour
+                if dx >= 0 and dx < 32 and dy >= 0 and dy < 32 then
+                    at[("%s@%d,%d"):format(d.decorative.name, reflect and (31 - dx) or dx, dy)] = d.amount
+                end
+            end
+            return at
+        end
+
+        local on_master, on_slave = census(master, true), census(slave, false)
+        assert.is_true(next(on_master) ~= nil, "setup: the master chunk has no decoratives")
+        assert.same(on_master, on_slave)
     end)
 end)
 

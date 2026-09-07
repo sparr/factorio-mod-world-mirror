@@ -1,6 +1,6 @@
 # The integration tier
 
-7 tests that ask a real Factorio what it actually did, on top of
+8 tests that ask a real Factorio what it actually did, on top of
 [factorio-test](https://mods.factorio.com/mod/factorio-test). Headless, no display.
 
 ```bash
@@ -20,11 +20,6 @@ data directory.
 The unit tier is separate: `test/run.sh` runs the busted specs in `test/spec` against
 `lib/`, in thirty milliseconds, with no game at all. The coordinate arithmetic belongs
 there. Anything about what the engine really does belongs here.
-
-**One test is red on purpose.** A reflected chunk comes back with no decoratives, though
-its master has them and the mod asks for them by name. That is a real outstanding bug,
-noted for 2.1.2; the test is left failing rather than deleted so it turns green when the
-bug is fixed.
 
 ## How it fits together
 
