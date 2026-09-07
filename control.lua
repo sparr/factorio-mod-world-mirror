@@ -213,6 +213,42 @@ function is_a_world(surface)
   return surface.planet ~= nil and surface.platform == nil
 end
 
+---Copy one edge of a chunk again, now that the neighbour beside it has settled the tiles
+---there.
+---
+---A chunk's outermost tiles are not final when it is generated: the boundary between it
+---and a neighbour is resolved when that neighbour arrives, which may be much later. The
+---copy taken at generation therefore holds provisional values along any side whose
+---neighbour did not exist yet -- most visibly land where the settled answer is water. Only
+---the one row or column facing the new neighbour needs redoing, 32 tiles rather than 1024.
+---@param surface LuaSurface
+---@param master_pos {x:number, y:number} the settled chunk's corner
+---@param towards {x:number, y:number} unit vector pointing at the neighbour that settled it
+---@param mirror_x boolean
+---@param mirror_y boolean
+---@param coord_offset number
+---@param tiles table[] appended to, so every edge settled at once goes in one write
+local function recopy_edge(surface, master_pos, towards, mirror_x, mirror_y, coord_offset, tiles)
+  for _, slave_pos in ipairs(mirror.locate_slaves(master_pos, mirror_x, mirror_y, coord_offset)) do
+    if surface.is_chunk_generated({x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}) then
+      local flip_x = slave_pos.x ~= master_pos.x
+      local flip_y = slave_pos.y ~= master_pos.y
+      for step = 0, 31 do
+        -- the row or column facing the neighbour, depending on which way it lies
+        local ix = towards.x == 0 and step or (towards.x > 0 and 31 or 0)
+        local iy = towards.y == 0 and step or (towards.y > 0 and 31 or 0)
+        tiles[#tiles+1] = {
+          name = surface.get_tile(master_pos.x + ix, master_pos.y + iy).name,
+          position = {
+            x = slave_pos.x + (flip_x and 31 - ix or ix),
+            y = slave_pos.y + (flip_y and 31 - iy or iy),
+          },
+        }
+      end
+    end
+  end
+end
+
 local function on_chunk_generated(event)
   local world_mirror_x, world_mirror_y, coord_offset = current_settings()
   if not world_mirror_x and not world_mirror_y then
@@ -248,6 +284,22 @@ local function on_chunk_generated(event)
       end
       mirror_chunk(surface, p1, slave_pos)
       surface.set_chunk_generated_status(slave_chunk_pos, defines.chunk_generated_status.entities)
+    end
+
+    -- This chunk has just settled the boundary with every neighbour that already existed,
+    -- so their copies are now out of date along that one edge.
+    local settled = {}
+    for _, towards in ipairs({{x=-1,y=0},{x=1,y=0},{x=0,y=-1},{x=0,y=1}}) do
+      local neighbour = {x = p1.x + towards.x*32, y = p1.y + towards.y*32}
+      if not mirror.is_slave(neighbour, world_mirror_x, world_mirror_y, coord_offset)
+        and surface.is_chunk_generated({x=math.floor(neighbour.x/32), y=math.floor(neighbour.y/32)})
+      then
+        recopy_edge(surface, neighbour, {x = -towards.x, y = -towards.y},
+          world_mirror_x, world_mirror_y, coord_offset, settled)
+      end
+    end
+    if #settled > 0 then
+      surface.set_tiles(settled, true, false, false)
     end
   end
 end

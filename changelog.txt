@@ -2,6 +2,8 @@
 Version: 2.1.4
 Date: ????
   Bugfixes:
+    - The seams between chunks match now. A strip of tiles along a chunk edge could come
+      out wrong, most often water where the other half has land, and stayed wrong.
     - Fulgora's ruin attractors are mirrored, so both halves of the map get them.
       Lightning rods and collectors you build yourself are left where you put them.
   Changes:
