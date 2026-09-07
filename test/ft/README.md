@@ -1,6 +1,6 @@
 # The integration tier
 
-11 tests that ask a real Factorio what it actually did, on top of
+16 tests that ask a real Factorio what it actually did, on top of
 [factorio-test](https://mods.factorio.com/mod/factorio-test). Headless, no display.
 
 ```bash
@@ -29,6 +29,14 @@ there. Anything about what the engine really does belongs here.
 - `test/ft/wm-tests` holds no prototypes. It is the marker that says "this is a test run".
 - `is_a_world` is global so the fixtures drive the real predicate rather than
   reimplementing it.
+
+## One fix is not covered here
+
+The `entity.valid` guard in `wipe_chunk` answers a crash that needs a whole region of
+Vulcanus to provoke — radius 12, some 625 chunks, where twelve already take ten seconds.
+The demolisher fixture is a smoke test and passes without the guard. The crash itself was
+verified by hand: generating that region dies with "LuaEntity API call when LuaEntity was
+invalid" without the guard and completes with it.
 
 ## The mod is slow, and the suite is shaped around it
 

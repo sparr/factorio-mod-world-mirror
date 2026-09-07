@@ -51,8 +51,11 @@ local function wipe_chunk(surface, pos)
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
   for _, entity in ipairs(entities) do
+    -- Destroying one entity can take others in this list with it. A demolisher on vulcanus
+    -- is a chain of segments, and removing any segment removes the whole creature, leaving
+    -- the rest of them here as invalid handles.
     -- attempt to avoid affecting entities not actually "on" this chunk
-    if entity.position.x >= pos.x and entity.position.x < pos.x+32 and entity.position.y >= pos.y and entity.position.y < pos.y+32 then 
+    if entity.valid and entity.position.x >= pos.x and entity.position.x < pos.x+32 and entity.position.y >= pos.y and entity.position.y < pos.y+32 then 
       if entity.type == "character" or entity.type == "player" then
         -- need to move player to a legal place to stand or else they die
         local dest = surface.find_non_colliding_position(entity.type, pos, 0, 1)
@@ -102,8 +105,10 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
   -- local new_entities = {}
   for _, entity in ipairs(master_entities) do
+    -- valid, for the same reason as in wipe_chunk: creating cliffs reshapes their
+    -- neighbours, which can remove one that is still sitting in this list
     -- attempt to avoid affecting entities not actually "on" this chunk
-    if entity.position.x >= master_pos.x and entity.position.x < master_pos.x+32 and entity.position.y >= master_pos.y and entity.position.y < master_pos.y+32 then 
+    if entity.valid and entity.position.x >= master_pos.x and entity.position.x < master_pos.x+32 and entity.position.y >= master_pos.y and entity.position.y < master_pos.y+32 then 
       if entity.type == "fish" or
          entity.type == "tree" or
          entity.type == "unit" or

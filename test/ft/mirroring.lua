@@ -297,6 +297,50 @@ describe("a chunk somebody has built in", function()
     end)
 end)
 
+describe("a chunk with a demolisher in it", function()
+    -- A smoke test, and honest about it: this does not reproduce the crash it belongs to,
+    -- and passes with the entity.valid guard removed. The crash wants a whole region of
+    -- vulcanus -- radius 12, some 625 chunks -- which the runner cannot sit through when
+    -- twelve chunks already take ten seconds. That case was checked by hand instead: with
+    -- the guard it generates, without it dies with "LuaEntity API call when LuaEntity was
+    -- invalid" in wipe_chunk.
+    test("is mirrored without the mod falling over", function()
+        -- A demolisher is a segmented-unit and a long chain of segment entities. Destroy
+        -- any one of them and the whole creature goes, so the rest of the snapshot
+        -- wipe_chunk is walking becomes invalid handles.
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        local slave = world.reflection_of(master)
+
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        local demolisher = surface.create_entity({
+            name = "small-demolisher", position = { slave.x + 16, slave.y + 16 }, force = "enemy" })
+        assert.is_not_nil(demolisher, "setup: could not place a demolisher")
+
+        -- its segments are not there the instant it is created; they follow on later ticks
+        async(600)
+        after_ticks(60, function()
+            -- inside the chunk, not merely nearby: wipe_chunk only walks what is in the
+            -- chunk, so segments trailing outside it never invalidate anything
+            local segments = surface.count_entities_filtered({
+                area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
+                type = "segment" })
+            assert.is_true(segments > 1,
+                ("setup: only %d segments inside the chunk"):format(segments))
+
+            -- generating the master mirrors over the chunk it is standing in
+            world.generate(surface, master)
+
+            local matched, mismatched = world.compare(surface, master, slave)
+            assert.equals(0, mismatched)
+            assert.equals(1024, matched)
+            done()
+        end)
+    end)
+end)
+
 describe("which surfaces count as worlds", function()
     test("nauvis does", function()
         assert.is_true(is_a_world(world.nauvis()))
