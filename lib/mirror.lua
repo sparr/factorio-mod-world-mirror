@@ -2,7 +2,8 @@
 --- surface stays in control.lua, so these can be tested without one.
 ---
 --- A mirror line is a tile coordinate: `lines.x` is the vertical line, `lines.y` the
---- horizontal one, and both fall on chunk boundaries. Everything at or beyond a line is a
+--- horizontal one, and both fall on chunk boundaries. The settings that feed these are
+--- counted in chunks; control.lua multiplies by 32 before calling in here. Everything at or beyond a line is a
 --- master and is copied; everything before it is a slave and is overwritten.
 ---
 --- A chunk's left-top corner reflects to `2*line - corner - 32`. The extra 32 is the

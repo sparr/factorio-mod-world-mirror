@@ -14,7 +14,10 @@ local mirror = require("lib.mirror")
 ---Loading them once meant changing an axis or the offset during a game did nothing until
 ---the save was reloaded -- and worse, left a client who joined after the change working
 ---from different numbers than everyone already playing.
----@return boolean mirror_x, boolean mirror_y, {x:number, y:number} lines in tiles
+---The settings count mirror lines in chunks, because that is the unit a player thinks in
+---and the lines can only fall on chunk boundaries anyway. Everything below this point
+---works in tiles, so the conversion happens here and nowhere else.
+---@return boolean mirror_x, boolean mirror_y, {x:number, y:number} lines, in tiles
 local function current_settings()
   return settings.global['world-mirror-x'].value --[[@as boolean]],
          settings.global['world-mirror-y'].value --[[@as boolean]],

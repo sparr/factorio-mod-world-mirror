@@ -8,13 +8,16 @@
 local offset = settings.global["world-mirror-chunk-offset"]
 if not offset then return end
 
-local lines = -offset.value
+-- Both are counted in chunks. The old one was a distance west and north, so 10 meant a
+-- line ten chunks before the origin; the new one is the position itself, so that same
+-- line is -10. The sign is the whole of the conversion.
+local line_in_chunks = -offset.value
 if settings.global["world-mirror-x-line"].value == -4
   and settings.global["world-mirror-y-line"].value == -4
-  and lines ~= -4
+  and line_in_chunks ~= -4
 then
-  settings.global["world-mirror-x-line"] = { value = lines }
-  settings.global["world-mirror-y-line"] = { value = lines }
+  settings.global["world-mirror-x-line"] = { value = line_in_chunks }
+  settings.global["world-mirror-y-line"] = { value = line_in_chunks }
   log("World Mirror: carried the old chunk offset of " .. offset.value ..
-      " over to mirror lines at " .. lines .. " chunks.")
+      " over to mirror lines at chunk " .. line_in_chunks .. ".")
 end
