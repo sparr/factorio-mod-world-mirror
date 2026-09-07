@@ -4,6 +4,8 @@ Date: ????
   Bugfixes:
     - The chunk offset can no longer be set below zero. Its floor was written as
       min_value, which is not a field, so nothing enforced it.
+    - The X and Y axis settings describe the right halves of the map. Their descriptions
+      were swapped: mirroring on X makes east and west match, not north and south.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.1
 Date: 2026-09-07
