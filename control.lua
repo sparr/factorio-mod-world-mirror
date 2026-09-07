@@ -23,9 +23,24 @@ local mirror = require("lib.mirror")
 ---
 ---PVP arranges its teams on a circle around a centre it picks at random, and does not
 ---expose that centre -- but the spawns are readable from the team forces, and their
----average is it. Two teams sit diametrically opposite whatever rotation the scenario
----chose, and a half turn maps one onto the other, which is what mirroring on both axes
----does. Four teams need a quarter turn, which this mod cannot do, so they are left alone.
+---average is it.
+---
+---Mirroring on both axes does not merely turn the map half way round: it copies one
+---quadrant into the other three, so all four carry the same ground. What each team gets
+---out of that depends on where it stands in its own quadrant.
+---
+---Two teams sit diametrically opposite whatever rotation the scenario chose, so they land
+---the same distance from both lines and their surroundings match exactly.
+---
+---Four teams land one to a quadrant, a quarter turn apart. Opposite pairs -- one and
+---three, two and four -- are again the same distance from the lines and match exactly.
+---The adjacent pairs get the same ground with their position transposed within it: at a
+---rotation of 17 degrees, teams one and three stand 256 east and 896 south of the lines
+---while two and four stand 896 and 256. Not perfect fairness, but every team draws from
+---the same quadrant of terrain rather than from four unrelated ones.
+---
+---Other counts are left alone, not because the copying would fail but because nobody has
+---worked out what it is worth for them.
 ---
 ---The reflection lands one tile off: it maps tile x to 2*line-1-x, so a spawn on a chunk
 ---boundary reflects to an odd tile and never onto the other spawn exactly. The terrain
@@ -43,7 +58,7 @@ local function pvp_lines(surface)
     if not force then return nil end
     spawns[#spawns + 1] = force.get_spawn_position(surface)
   end
-  if #spawns ~= 2 then return nil end
+  if #spawns ~= 2 and #spawns ~= 4 then return nil end
 
   local centre = mirror.centre_of(spawns)
   if not centre then return nil end

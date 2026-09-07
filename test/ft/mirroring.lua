@@ -622,20 +622,45 @@ describe("following the PVP scenario", function()
         assert.equals(1024, matched)
     end)
 
-    test("leaves a four team round alone, which a half turn cannot make fair", function()
-        -- Four teams sit a quarter turn apart. A half turn maps team 1 onto team 3 and
-        -- team 2 onto team 4, so two pairs match and the pairs do not match each other --
-        -- worse than not trying. Until a quarter turn exists, the settings stand.
+    test("gives all four quadrants of a four team round the same ground", function()
+        -- Mirroring both axes copies one quadrant into the other three, so every team
+        -- draws from the same terrain. Opposite teams stand the same distance from the
+        -- lines and match exactly; adjacent ones get that terrain with their position
+        -- transposed within it.
         local surface = world.terrain()
-        pretend_pvp(surface, { x = 200 * 32, y = 0 }, 30 * 32, 4)
+        local centre = { x = 200 * 32, y = 8 * 32 }
+        pretend_pvp(surface, centre, 30 * 32, 4)
         world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
 
-        local master = world.claim(surface)
-        world.generate(surface, master)
+        local master = { x = centre.x + 6 * 32, y = centre.y + 5 * 32 }
+        assert.is_false(surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 }),
+            "setup: the master chunk already exists")
+        surface.request_to_generate_chunks({ master.x + 16, master.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
 
-        local matched, mismatched = world.compare(surface, master, world.reflection_of(master))
-        assert.equals(0, mismatched, "a four team round was followed anyway")
-        assert.equals(1024, matched)
+        local across_x = 2 * centre.x - master.x - 32
+        local across_y = 2 * centre.y - master.y - 32
+        local quadrants = {
+            { corner = { x = across_x, y = master.y }, flip_x = true,  flip_y = false },
+            { corner = { x = master.x, y = across_y }, flip_x = false, flip_y = true },
+            { corner = { x = across_x, y = across_y }, flip_x = true,  flip_y = true },
+        }
+        for index, q in ipairs(quadrants) do
+            assert.is_true(surface.is_chunk_generated({ x = q.corner.x / 32, y = q.corner.y / 32 }),
+                ("quadrant %d was never written"):format(index))
+            local mismatched = 0
+            for dx = 0, 31 do
+                for dy = 0, 31 do
+                    local sx = q.corner.x + (q.flip_x and 31 - dx or dx)
+                    local sy = q.corner.y + (q.flip_y and 31 - dy or dy)
+                    if surface.get_tile(master.x + dx, master.y + dy).name
+                        ~= surface.get_tile(sx, sy).name then
+                        mismatched = mismatched + 1
+                    end
+                end
+            end
+            assert.equals(0, mismatched, ("quadrant %d does not match the master"):format(index))
+        end
     end)
 
     test("is ignored when the scenario is not running", function()
