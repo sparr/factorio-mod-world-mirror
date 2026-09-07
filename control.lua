@@ -41,79 +41,10 @@ end
 ---the territory they patrol. The ground beneath them cannot be touched either -- blanking
 ---a tile out from under one kills it -- so those tiles keep their old terrain for now and
 ---are written down for later.
----Whether this game has demolishers in it at all. Without space age it does not, and the
----search below is then pure waste on every chunk of every world.
-local any_demolisher_prototypes
-local function demolishers_can_exist()
-  if any_demolisher_prototypes == nil then
-    any_demolisher_prototypes = false
-    -- the filtered prototype list is userdata, so pairs it rather than asking next
-    for _ in pairs(prototypes.get_entity_filtered{{filter = "type", type = "segmented-unit"}}) do
-      any_demolisher_prototypes = true
-      break
-    end
-  end
-  return any_demolisher_prototypes
-end
-
----@param surface LuaSurface
----@param area table
----@return table<string, boolean> covered
-local function tiles_under_demolishers(surface, area)
-  local covered = {}
-  if not demolishers_can_exist() then return covered end
-  local filter = {type = {"segmented-unit", "segment"}}
-  if area then filter.area = area end
-  for _, piece in pairs(surface.find_entities_filtered(filter)) do
-    local box = piece.bounding_box
-    for x = math.floor(box.left_top.x), math.floor(box.right_bottom.x) do
-      for y = math.floor(box.left_top.y), math.floor(box.right_bottom.y) do
-        covered[x .. "," .. y] = true
-      end
-    end
-  end
-  return covered
-end
-
----Tiles that could not be laid because a demolisher was standing there. Kept until it
----moves, then laid, so the map ends up mirrored everywhere even though it could not be
----done in one go.
----@param surface LuaSurface
----@param tiles table[]
-local function remember_for_later(surface, tiles)
-  if #tiles == 0 then return end
-  storage.pending = storage.pending or {}
-  local waiting = storage.pending[surface.index]
-  if not waiting then
-    waiting = {}
-    storage.pending[surface.index] = waiting
-  end
-  for _, tile in ipairs(tiles) do
-    waiting[tile.position.x .. "," .. tile.position.y] = tile.name
-  end
-end
-
----@param covered table<string, boolean> tiles a demolisher is standing on, searched once
----per chunk and shared by the clearing and the copy
 local function wipe_chunk(surface, pos, covered)
-  -- blank tiles, but not the ground a demolisher is standing on: see
-  -- tiles_under_demolishers
-  -- the key is only built when there is something to look up: on a world with no
-  -- demolishers this is a thousand string joins a chunk that would buy nothing
-  local anything_covered = next(covered) ~= nil
-  local tiles = {}
-  for dx = 0,31 do
-    for dy = 0,31 do
-      local x, y = pos.x+dx, pos.y+dy
-      if not (anything_covered and covered[x .. "," .. y]) then
-        tiles[#tiles+1] = {name= "out-of-map", position= {x= x, y= y}}
-      end
-    end
-  end
-  local tile_correction = false -- causes problems with deep water
-  -- do not let blanking the tiles take the built things with it; the mirrored tiles below
-  -- are laid with collision handling on, so anything the new ground cannot hold still goes
-  surface.set_tiles(tiles, tile_correction, false, false)
+  -- No blanking. The mirrored tiles are laid straight over what is here, in one pass by
+  -- mirror_chunk, so the ground is never briefly out-of-map -- which is what used to kill
+  -- anything standing on it.
 
   -- destroy entities
   local entities = surface.find_entities({pos, {pos.x+32, pos.y+32}})
@@ -130,7 +61,9 @@ local function wipe_chunk(surface, pos, covered)
       elseif is_someones_work(entity) then
         -- leave it standing: see is_someones_work
       elseif entity.type == "segmented-unit" or entity.type == "segment" then
-        -- leave it be: see tiles_under_demolishers
+        -- a demolisher: never destroyed, never copied, and nothing done about the
+        -- territory it patrols. It keeps standing where it is while the ground beneath
+        -- it is replaced under its feet.
       else
         entity.destroy()
         --TODO handle destroy failures
@@ -152,9 +85,7 @@ local function is_placeable(entity)
   return items ~= nil and #items > 0
 end
 
-local function mirror_chunk(surface, master_pos, slave_pos, covered)
-  -- the chunk's own corner, before the shifts below move slave_pos to its far edge
-  local slave_origin = {x = slave_pos.x, y = slave_pos.y}
+local function mirror_chunk(surface, master_pos, slave_pos)
   -- which direction(s) are we mirroring?
   local mirror_x = slave_pos.x ~= master_pos.x
   local mirror_y = slave_pos.y ~= master_pos.y
@@ -172,22 +103,15 @@ local function mirror_chunk(surface, master_pos, slave_pos, covered)
   end
 
   -- clone tiles
-  local anything_covered = next(covered) ~= nil
-  local tiles, held_back = {}, {}
+  local tiles = {}
   for dx = 0,31 do
     for dy = 0,31 do
       local tilename = surface.get_tile(master_pos.x + dx, master_pos.y + dy).name
-      local tile = {name= tilename, position= {x= slave_pos.x + dx*slave_dx, y= slave_pos.y + dy*slave_dy}}
-      if anything_covered and covered[tile.position.x .. "," .. tile.position.y] then
-        held_back[#held_back+1] = tile
-      else
-        tiles[#tiles+1] = tile
-      end
+      tiles[#tiles+1] = {name= tilename, position= {x= slave_pos.x + dx*slave_dx, y= slave_pos.y + dy*slave_dy}}
     end
   end
   local tile_correction = true -- causes problems with deep water
   surface.set_tiles(tiles, tile_correction)
-  remember_for_later(surface, held_back)
 
   -- clone entities
   local master_entities = surface.find_entities({master_pos, {master_pos.x+32, master_pos.y+32}})
@@ -306,10 +230,9 @@ local function on_chunk_generated(event)
     -- slave
     -- if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
     local master_pos = mirror.locate_master(p1, world_mirror_x, world_mirror_y, coord_offset)
-    local covered = tiles_under_demolishers(surface, {p1, {p1.x+32, p1.y+32}})
-    wipe_chunk(surface, p1, covered)
+    wipe_chunk(surface, p1)
     if surface.is_chunk_generated({x=math.floor(master_pos.x/32), y=math.floor(master_pos.y/32)}) then
-      mirror_chunk(surface, master_pos, p1, covered)
+      mirror_chunk(surface, master_pos, p1)
     else
       surface.request_to_generate_chunks(master_pos)
     end
@@ -320,44 +243,14 @@ local function on_chunk_generated(event)
     for _,slave_pos in ipairs(slaves) do
       local slave_chunk_pos = {x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}
       -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
-      local covered = tiles_under_demolishers(surface,
-        {slave_pos, {slave_pos.x+32, slave_pos.y+32}})
       if surface.is_chunk_generated(slave_chunk_pos) then
-        wipe_chunk(surface, slave_pos, covered)
+        wipe_chunk(surface, slave_pos)
       end
-      mirror_chunk(surface, p1, slave_pos, covered)
+      mirror_chunk(surface, p1, slave_pos)
       surface.set_chunk_generated_status(slave_chunk_pos, defines.chunk_generated_status.entities)
     end
   end
 end
-
----Lay the tiles that were held back, once nothing is standing on them any more.
-local function lay_what_was_held_back()
-  if not storage.pending then return end
-  for surface_index, waiting in pairs(storage.pending) do
-    local surface = game.get_surface(surface_index)
-    if not surface then
-      storage.pending[surface_index] = nil
-    else
-      local covered = tiles_under_demolishers(surface, nil)
-      local ready = {}
-      for key, name in pairs(waiting) do
-        if not covered[key] then
-          local x, y = key:match("^(-?%d+),(-?%d+)$")
-          ready[#ready+1] = {name = name, position = {x = tonumber(x), y = tonumber(y)}}
-          waiting[key] = nil
-        end
-      end
-      if #ready > 0 then
-        surface.set_tiles(ready, true, false, false)
-      end
-      if next(waiting) == nil then storage.pending[surface_index] = nil end
-    end
-  end
-  if next(storage.pending) == nil then storage.pending = nil end
-end
-
-script.on_nth_tick(60, lay_what_was_held_back)
 
 script.on_event(defines.events.on_chunk_generated, on_chunk_generated)
 --- The integration tier, which runs inside a live game rather than against nothing.

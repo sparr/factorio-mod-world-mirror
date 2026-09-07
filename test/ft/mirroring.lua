@@ -412,15 +412,10 @@ describe("attractors a player could have built", function()
 end)
 
 describe("a reflection reached before its partner", function()
-    test("is emptied, so it has nothing of its own left to duplicate", function()
-        -- This is why copying attractors cannot double them up. A chunk reached first is
-        -- blanked while it waits, and blanking takes everything with it -- including the
-        -- attractors the map generator had just grown there, which sit on the player force
-        -- and would otherwise be spared as somebody's work. Whatever the partner sends
-        -- later arrives into an empty chunk.
-        --
-        -- It also bounds what "keep what players build" means: things built during the
-        -- wait survive, things that were there before it do not.
+    test("keeps its own ground while it waits, rather than going black", function()
+        -- Nothing is ever blanked: the partner's tiles are laid straight over whatever is
+        -- here. So a chunk reached first looks like ordinary ground until its partner
+        -- turns up, instead of being a hole in the map for however long that takes.
         local surface = world.fulgora()
         local master = world.claim(surface)
         local slave = world.reflection_of(master)
@@ -428,12 +423,23 @@ describe("a reflection reached before its partner", function()
         surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
         surface.force_generate_chunk_requests()
 
-        assert.equals(1024, surface.count_tiles_filtered({
+        assert.equals(0, surface.count_tiles_filtered({
             area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
-            name = "out-of-map" }), "the waiting chunk was not blanked")
-        assert.equals(0, #surface.find_entities({ { slave.x, slave.y },
-                                                  { slave.x + 32, slave.y + 32 } }),
-            "something survived in the waiting chunk and could be duplicated later")
+            name = "out-of-map" }), "the waiting chunk was blanked")
+    end)
+
+    test("still ends up matching its partner once that arrives", function()
+        local surface = world.terrain()
+        local master = world.claim(surface)
+        local slave = world.reflection_of(master)
+
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+        world.generate(surface, master)
+
+        local matched, mismatched = world.compare(surface, master, slave)
+        assert.equals(0, mismatched)
+        assert.equals(1024, matched)
     end)
 end)
 
