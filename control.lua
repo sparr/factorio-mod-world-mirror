@@ -35,6 +35,24 @@ local function is_someones_work(entity)
   return force ~= "neutral" and force ~= "enemy"
 end
 
+---Is a demolisher, or any part of one, standing in this chunk?
+---
+---A chunk that holds one is left exactly as it is: not cleared, not copied over. Sparing
+---the creature from the clearing loop is not enough, because clearing blanks the ground to
+---out-of-map first and a demolisher cannot live on that -- it dies within a tick or two,
+---well before anything is copied back. So the whole chunk is skipped, and its terrain
+---goes unmirrored along with it.
+---@param surface LuaSurface
+---@param corner {x:number, y:number}
+---@return boolean
+local function holds_a_demolisher(surface, corner)
+  return surface.count_entities_filtered{
+    area = {corner, {corner.x+32, corner.y+32}},
+    type = {"segmented-unit", "segment"},
+    limit = 1,
+  } > 0
+end
+
 local function wipe_chunk(surface, pos)
   -- blank tiles
   local tiles = {}
@@ -224,6 +242,12 @@ local function on_chunk_generated(event)
   local surface = event.surface
   local p1 = event.area.left_top
 
+  -- Demolishers are left entirely alone: not destroyed, not copied, nothing done about
+  -- the territory they patrol. A chunk with one in it is not touched at all.
+  if holds_a_demolisher(surface, p1) then
+    return
+  end
+
   if mirror.is_slave(p1, world_mirror_x, world_mirror_y, coord_offset) then
     -- slave
     -- if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
@@ -242,10 +266,14 @@ local function on_chunk_generated(event)
       local slave_chunk_pos = {x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}
       -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
       if surface.is_chunk_generated(slave_chunk_pos) then
+        if holds_a_demolisher(surface, slave_pos) then
+          goto next_slave
+        end
         wipe_chunk(surface, slave_pos)
       end
       mirror_chunk(surface, p1, slave_pos)
       surface.set_chunk_generated_status(slave_chunk_pos, defines.chunk_generated_status.entities)
+      ::next_slave::
     end
   end
 end

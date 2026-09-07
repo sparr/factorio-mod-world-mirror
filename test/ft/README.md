@@ -30,7 +30,7 @@ there. Anything about what the engine really does belongs here.
 - `is_a_world` is global so the fixtures drive the real predicate rather than
   reimplementing it.
 
-## Two fixes are not covered here
+## Three fixes are not covered here
 
 The `entity.valid` guard in `wipe_chunk` answers a crash that needs a whole region of
 Vulcanus to provoke — radius 12, some 625 chunks, where twelve already take ten seconds.

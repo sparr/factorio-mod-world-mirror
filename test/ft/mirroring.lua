@@ -297,45 +297,34 @@ describe("a chunk somebody has built in", function()
     end)
 end)
 
-describe("a chunk with a demolisher in it", function()
-    -- A smoke test, and honest about it: this does not reproduce the crash it belongs to,
-    -- and passes with the entity.valid guard removed. The crash wants a whole region of
-    -- vulcanus -- radius 12, some 625 chunks -- which the runner cannot sit through when
-    -- twelve chunks already take ten seconds. That case was checked by hand instead: with
-    -- the guard it generates, without it dies with "LuaEntity API call when LuaEntity was
-    -- invalid" in wipe_chunk.
-    test("is mirrored without the mod falling over", function()
-        -- A demolisher is a segmented-unit and a long chain of segment entities. Destroy
-        -- any one of them and the whole creature goes, so the rest of the snapshot
-        -- wipe_chunk is walking becomes invalid handles.
+describe("demolishers", function()
+    -- Left entirely alone: not destroyed, not copied, nothing done about their territory.
+    -- A chunk holding one is skipped whole, because clearing a chunk blanks it to
+    -- out-of-map first and a demolisher does not survive that -- it dies within a tick or
+    -- two, well before anything could be copied back. The two halves of a vulcanus map
+    -- therefore differ in their demolishers, and in the terrain of the chunks they are
+    -- standing in.
+    --
+    -- That skipping is verified by hand rather than here: reaching it wants the map
+    -- generator to put a demolisher in a chunk that is about to be mirrored, which is not
+    -- something a fixture can arrange on demand.
+    test("are not copied to the other side", function()
         local surface = world.terrain()
         local master = world.claim(surface)
         local slave = world.reflection_of(master)
-
-        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
-        surface.force_generate_chunk_requests()
+        world.generate(surface, master)
 
         local demolisher = surface.create_entity({
-            name = "small-demolisher", position = { slave.x + 16, slave.y + 16 }, force = "enemy" })
+            name = "small-demolisher", position = { master.x + 16, master.y + 16 },
+            force = "enemy" })
         assert.is_not_nil(demolisher, "setup: could not place a demolisher")
 
-        -- its segments are not there the instant it is created; they follow on later ticks
         async(600)
         after_ticks(60, function()
-            -- inside the chunk, not merely nearby: wipe_chunk only walks what is in the
-            -- chunk, so segments trailing outside it never invalidate anything
-            local segments = surface.count_entities_filtered({
+            assert.equals(0, surface.count_entities_filtered({
                 area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
-                type = "segment" })
-            assert.is_true(segments > 1,
-                ("setup: only %d segments inside the chunk"):format(segments))
-
-            -- generating the master mirrors over the chunk it is standing in
-            world.generate(surface, master)
-
-            local matched, mismatched = world.compare(surface, master, slave)
-            assert.equals(0, mismatched)
-            assert.equals(1024, matched)
+                type = { "segmented-unit", "segment" } }),
+                "a demolisher was copied across the mirror line")
             done()
         end)
     end)

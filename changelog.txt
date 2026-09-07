@@ -4,6 +4,10 @@ Date: ????
   Bugfixes:
     - Fulgora's ruin attractors are mirrored, so both halves of the map get them.
       Lightning rods and collectors you build yourself are left where you put them.
+  Changes:
+    - Demolishers are left alone. A chunk with one in it is not mirrored at all, so the
+      demolisher lives and that chunk's terrain stays as the map generator made it. The
+      two halves of a Vulcanus map differ where the demolishers are.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.3
 Date: 2026-09-07
