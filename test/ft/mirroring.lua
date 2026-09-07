@@ -393,6 +393,35 @@ describe("fulgora's lightning attractors", function()
     end)
 end)
 
+describe("attractors a player could have built", function()
+    test("are a different prototype from the ones fulgora grows", function()
+        -- The rule is "copy the ones nothing can place". It rests on the ruins having no
+        -- item that builds them, while rods and collectors do.
+        local ruin = prototypes.entity["fulgoran-ruin-attractor"]
+        assert.is_not_nil(ruin, "fulgoran-ruin-attractor is gone")
+        assert.equals("lightning-attractor", ruin.type)
+        local items = ruin.items_to_place_this
+        assert.is_true(items == nil or #items == 0,
+            "the ruin attractor became placeable, so the mod now copies players' work")
+
+        for _, name in ipairs({ "lightning-rod", "lightning-collector" }) do
+            local built = prototypes.entity[name]
+            assert.is_not_nil(built, name .. " is gone")
+            assert.equals("lightning-attractor", built.type)
+            assert.is_true(built.items_to_place_this ~= nil and #built.items_to_place_this > 0,
+                name .. " stopped being placeable, so the mod would start copying it")
+        end
+    end)
+
+    -- The behaviour itself is not covered here. Reaching it needs a master chunk that
+    -- has been built in since it was generated, which means deleting the reflection and
+    -- letting it be made again -- and delete_chunk is deferred, so it does not happen
+    -- within one test. Fulgora's attractor chunks are sparse enough that hunting for a
+    -- suitable one is flaky too. Checked by hand instead: a rod built on a team force in
+    -- a master chunk stays out of the reflection with this rule, and is copied across
+    -- without it, still on the builder's force.
+end)
+
 describe("a reflection reached before its partner", function()
     test("is emptied, so it has nothing of its own left to duplicate", function()
         -- This is why copying attractors cannot double them up. A chunk reached first is

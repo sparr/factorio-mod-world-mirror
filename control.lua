@@ -73,6 +73,16 @@ local function wipe_chunk(surface, pos)
   surface.destroy_decoratives({pos, {pos.x+32, pos.y+32}})
 end
 
+---Can a player put this down? Map generation makes things no item places -- fulgora's
+---ruin attractors among them -- and those are the ones worth copying. Anything a player
+---could have built is theirs, not the map's.
+---@param entity LuaEntity
+---@return boolean
+local function is_placeable(entity)
+  local items = entity.prototype.items_to_place_this
+  return items ~= nil and #items > 0
+end
+
 local function mirror_chunk(surface, master_pos, slave_pos)
   -- which direction(s) are we mirroring?
   local mirror_x = slave_pos.x ~= master_pos.x
@@ -116,8 +126,11 @@ local function mirror_chunk(surface, master_pos, slave_pos)
          entity.type == "resource" or
          entity.type == "unit-spawner" or
          entity.type == "simple-entity" or
-         -- fulgora grows these among its scrap, eight or so to a chunk
-         entity.type == "lightning-attractor" or
+         -- Fulgora grows ruin attractors among its scrap. Only the ones nothing can
+         -- place: lightning rods and collectors are the same type and players build
+         -- those, and copying a team's rod into the other team's half would hand them a
+         -- structure -- still on the builder's force -- that they never built.
+         ( entity.type == "lightning-attractor" and not is_placeable(entity) ) or
          ( entity.type == "turret" and entity.prototype.subgroup.name == "enemies" ) or
          false then -- makes above lines more diff-friendly
         local cliff_orientation

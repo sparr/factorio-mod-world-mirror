@@ -2,9 +2,11 @@
 Version: 2.1.4
 Date: ????
   Bugfixes:
-    - Fulgora's lightning attractors are mirrored. The map generator grows them among the
+    - Fulgora's ruin attractors are mirrored. The map generator grows them among the
       scrap, and they were not in the list of things this mod copies, so one half of the
-      map had them and the other did not.
+      map had them and the other did not. Lightning rods and collectors are the same kind
+      of thing but players build those, and they are left alone -- copying one across the
+      line would hand the far side a structure, still owned by whoever built it.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.3
 Date: 2026-09-07

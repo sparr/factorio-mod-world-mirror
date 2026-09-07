@@ -30,13 +30,21 @@ there. Anything about what the engine really does belongs here.
 - `is_a_world` is global so the fixtures drive the real predicate rather than
   reimplementing it.
 
-## One fix is not covered here
+## Two fixes are not covered here
 
 The `entity.valid` guard in `wipe_chunk` answers a crash that needs a whole region of
 Vulcanus to provoke — radius 12, some 625 chunks, where twelve already take ten seconds.
 The demolisher fixture is a smoke test and passes without the guard. The crash itself was
 verified by hand: generating that region dies with "LuaEntity API call when LuaEntity was
 invalid" without the guard and completes with it.
+
+The other is copying only the attractors a player could not have built. Reaching that path
+needs a master chunk built in *since* it was generated, so the reflection has to be deleted
+and made again — and `delete_chunk` is deferred, so it does not happen inside one test.
+Fulgora's attractor chunks are sparse enough to make hunting for a suitable one flaky as
+well. Checked by hand: a rod built on a team force stays out of the reflection with the
+rule and is copied across without it. What the suite does hold is the prototype split the
+rule rests on — ruins unplaceable, rods and collectors placeable.
 
 ## The mod is slow, and the suite is shaped around it
 
