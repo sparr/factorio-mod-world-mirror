@@ -1,3 +1,5 @@
+local mirror = require("lib.mirror")
+
 -- local function debug(...)
 --   if game and game.players[1] then
 --     game.players[1].print("DEBUG: " .. serpent.line(...,{comment=false}))
@@ -12,31 +14,6 @@ local world_mirror_x = settings.global['world-mirror-x'].value
 local world_mirror_y = settings.global['world-mirror-y'].value
 local chunk_offset = settings.global['world-mirror-chunk-offset'].value
 local coord_offset = chunk_offset * 32
-
-local function locate_master(slave_pos)
-  local master = {x=slave_pos.x, y=slave_pos.y}
-  if world_mirror_x and slave_pos.x < -coord_offset then
-    master.x = -2*coord_offset - slave_pos.x - 32
-  end
-  if world_mirror_y and slave_pos.y < -coord_offset then
-    master.y = -2*coord_offset - slave_pos.y - 32
-  end
-  return master
-end
-
-local function locate_slaves(master_pos)
-  local slaves = {}
-  if world_mirror_x and master_pos.x >= -coord_offset then
-    slaves[#slaves+1] = {x=-2*coord_offset-master_pos.x-32, y=master_pos.y}
-  end
-  if world_mirror_y and master_pos.y >= -coord_offset then
-    slaves[#slaves+1] = {x=master_pos.x, y=-2*coord_offset-master_pos.y-32}
-  end
-  if world_mirror_x and world_mirror_y and master_pos.x >= -coord_offset and master_pos.y >= -coord_offset then
-    slaves[#slaves+1] = {x=-2*coord_offset-master_pos.x-32, y=-2*coord_offset-master_pos.y-32}
-  end
-  return slaves
-end
 
 local function wipe_chunk(surface, pos)
   -- blank tiles
@@ -190,10 +167,10 @@ local function on_chunk_generated(event)
   local surface = event.surface
   local p1 = event.area.left_top
 
-  if (world_mirror_x and p1.x < -coord_offset) or (world_mirror_y and p1.y < -coord_offset) then
+  if mirror.is_slave(p1, world_mirror_x, world_mirror_y, coord_offset) then
     -- slave
     -- if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
-    local master_pos = locate_master(p1)
+    local master_pos = mirror.locate_master(p1, world_mirror_x, world_mirror_y, coord_offset)
     wipe_chunk(surface, p1)
     if surface.is_chunk_generated({x=math.floor(master_pos.x/32), y=math.floor(master_pos.y/32)}) then
       mirror_chunk(surface, master_pos, p1)
@@ -203,7 +180,7 @@ local function on_chunk_generated(event)
   else
     -- master
     -- if p1.y==-coord_offset then debug("master chunk at " .. pos2s(p1)) end
-    local slaves = locate_slaves(p1)
+    local slaves = mirror.locate_slaves(p1, world_mirror_x, world_mirror_y, coord_offset)
     for _,slave_pos in ipairs(slaves) do
       local slave_chunk_pos = {x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}
       -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
