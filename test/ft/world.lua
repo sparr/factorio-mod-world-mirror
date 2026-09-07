@@ -64,6 +64,23 @@ function world.claim(surface)
     error("no unused master chunk left to claim")
 end
 
+---A chunk in slave territory that nothing has generated, whose master does not exist
+---either. This is what a player walking west into unexplored ground reaches.
+---@param surface LuaSurface
+---@return {x:number, y:number} slave, {x:number, y:number} its master
+function world.claim_slave(surface)
+    for candidate = 30, 200 do
+        local slave = { x = -candidate * 32, y = 0 }
+        local master = { x = -2 * world.COORD_OFFSET - slave.x - 32, y = slave.y }
+        if not surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 })
+            and not surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 })
+        then
+            return slave, master
+        end
+    end
+    error("no unused slave chunk left to claim")
+end
+
 ---Claim and generate chunks until one of them holds something the mod clones, and hand
 ---back that chunk with its reflection. Terrain is terrain: not every chunk has a tree in
 ---it, and a fixture about cloning needs one that does.

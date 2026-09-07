@@ -87,6 +87,129 @@ describe("a generated chunk", function()
     end)
 end)
 
+describe("a slave chunk reached before its master exists", function()
+    test("does not stay blank", function()
+        -- What a player walking west into unexplored ground does. The mod blanks the
+        -- chunk to out-of-map, and only fills it if the master already exists; otherwise
+        -- it asks for the master to be generated and returns, leaving a black hole until
+        -- that request lands. SoulForge reported black sections on the portal in 2017.
+        local surface = world.terrain()
+        local slave, master = world.claim_slave(surface)
+
+        async(600)
+        surface.request_to_generate_chunks({ slave.x + 16, slave.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        after_ticks(300, function()
+            -- the master must have been fetched, or nothing was mirrored and a chunk of
+            -- ordinary terrain would pass this on its own
+            assert.is_true(surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 }),
+                ("the master at %d,%d was never generated"):format(master.x, master.y))
+            local blank = surface.count_tiles_filtered({
+                area = { { slave.x, slave.y }, { slave.x + 32, slave.y + 32 } },
+                name = "out-of-map" })
+            assert.equals(0, blank, ("%d tiles left blank at %d,%d"):format(blank, slave.x, slave.y))
+
+            local matched, mismatched = 0, 0
+            for dx = 0, 31 do
+                for dy = 0, 31 do
+                    if surface.get_tile(master.x + dx, master.y + dy).name
+                        == surface.get_tile(slave.x + 31 - dx, slave.y + dy).name then
+                        matched = matched + 1
+                    else
+                        mismatched = mismatched + 1
+                    end
+                end
+            end
+            assert.equals(0, mismatched, "the chunk was refilled, but not with its mirror")
+            assert.equals(1024, matched)
+            done()
+        end)
+    end)
+end)
+
+describe("a whole region of slave chunks revealed at once", function()
+    test("none of them stays blank", function()
+        -- radar, or a scenario that pre-generates its starting area, asks for many chunks
+        -- in one go. Every one of them is blanked and wants a master fetched.
+        local surface = world.terrain()
+        local first = world.claim_slave(surface)
+        local width, height = 4, 3
+
+        async(1200)
+        for cx = 0, width - 1 do
+            for cy = 0, height - 1 do
+                surface.request_to_generate_chunks(
+                    { first.x - cx * 32 + 16, first.y + cy * 32 + 16 }, 0)
+            end
+        end
+        surface.force_generate_chunk_requests()
+
+        after_ticks(600, function()
+            local blank_chunks, worst = 0, nil
+            for cx = 0, width - 1 do
+                for cy = 0, height - 1 do
+                    local corner = { x = first.x - cx * 32, y = first.y + cy * 32 }
+                    local blank = surface.count_tiles_filtered({
+                        area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } },
+                        name = "out-of-map" })
+                    if blank > 0 then
+                        blank_chunks = blank_chunks + 1
+                        worst = worst or ("%d,%d with %d blank tiles"):format(corner.x, corner.y, blank)
+                    end
+                end
+            end
+            assert.equals(0, blank_chunks,
+                ("%d of %d chunks left blank, first %s")
+                :format(blank_chunks, width * height, tostring(worst)))
+            done()
+        end)
+    end)
+end)
+
+describe("all four quadrants at once", function()
+    local saved
+    before_each(function() saved = world.snapshot() end)
+    after_each(function() world.restore(saved) end)
+
+    test("gives a master all three of its reflections", function()
+        -- the README's "all four quarters" case. One master, deliberately: mirroring it
+        -- into three reflections costs the best part of a second, and asking for a region
+        -- of them outlasts the runner's patience -- which is a performance problem in its
+        -- own right, noted for later, not something to hide behind a smaller number here.
+        local surface = world.terrain()
+        world.configure({ mirror_x = true, mirror_y = true, chunk_offset = 0 })
+
+        local master = { x = 70 * 32, y = 70 * 32 }
+        assert.is_false(surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 }),
+            "setup: the master chunk already exists")
+
+        async(1200)
+        surface.request_to_generate_chunks({ master.x + 16, master.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        after_ticks(120, function()
+            -- with the lines through the origin a master at m reflects to -m-32
+            local across = -master.x - 32
+            local reflections = {
+                { x = across, y = master.y },
+                { x = master.x, y = across },
+                { x = across, y = across },
+            }
+            for _, corner in ipairs(reflections) do
+                local blank = surface.count_tiles_filtered({
+                    area = { { corner.x, corner.y }, { corner.x + 32, corner.y + 32 } },
+                    name = "out-of-map" })
+                assert.equals(0, blank,
+                    ("reflection at %d,%d has %d blank tiles"):format(corner.x, corner.y, blank))
+                assert.is_true(surface.is_chunk_generated({ x = corner.x / 32, y = corner.y / 32 }),
+                    ("reflection at %d,%d was never made"):format(corner.x, corner.y))
+            end
+            done()
+        end)
+    end)
+end)
+
 describe("which surfaces count as worlds", function()
     test("nauvis does", function()
         assert.is_true(is_a_world(world.nauvis()))

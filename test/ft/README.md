@@ -1,6 +1,6 @@
 # The integration tier
 
-8 tests that ask a real Factorio what it actually did, on top of
+11 tests that ask a real Factorio what it actually did, on top of
 [factorio-test](https://mods.factorio.com/mod/factorio-test). Headless, no display.
 
 ```bash
@@ -29,6 +29,14 @@ there. Anything about what the engine really does belongs here.
 - `test/ft/wm-tests` holds no prototypes. It is the marker that says "this is a test run".
 - `is_a_world` is global so the fixtures drive the real predicate rather than
   reimplementing it.
+
+## The mod is slow, and the suite is shaped around it
+
+Mirroring one master chunk into its reflections costs the best part of a second — 956 ms
+for a single tick, measured with both axes on. Asking for a region of chunks in one go
+outruns the runner's fifteen-second patience and the whole run is killed, which is why the
+four-quadrant fixture asks for exactly one master and the region fixture stays small. That
+is a real performance problem, not a test-harness quirk.
 
 ## Two things about the ground
 
