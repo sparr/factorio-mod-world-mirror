@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.5
 Date: ????
+  Features:
+    - In the PvP scenario with two teams, the mirror lines are put on the teams
+      automatically, so both teams get the same ground whichever way the scenario laid
+      them out. Rounds with any other number of teams are left alone. Can be turned off.
   Changes:
     - The mirror lines can be put anywhere, and each axis has its own. The single chunk
       offset, which could only place both lines the same distance west and north of the

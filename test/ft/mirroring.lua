@@ -562,3 +562,92 @@ describe("mirror lines placed anywhere", function()
         assert.equals(1024, matched)
     end)
 end)
+
+describe("following the PVP scenario", function()
+    local saved
+    before_each(function() saved = world.snapshot() end)
+    after_each(function()
+        world.restore(saved)
+        if remote.interfaces["pvp"] then remote.remove_interface("pvp") end
+    end)
+
+    --- Stand in for the scenario: two teams on a circle around a centre of our choosing,
+    --- reached the way the real one is reached -- a remote interface listing the teams,
+    --- and each team force carrying its spawn.
+    local function pretend_pvp(surface, centre, radius, count)
+        local teams = {}
+        for index = 1, count do
+            local name = "pvp-team-" .. index
+            local force = game.forces[name] or game.create_force(name)
+            local angle = index * 2 * math.pi / count
+            force.set_spawn_position({
+                centre.x + 32 * math.floor(math.cos(angle) * radius / 32),
+                centre.y + 32 * math.floor(math.sin(angle) * radius / 32),
+            }, surface)
+            teams[index] = { name = name }
+        end
+        remote.add_interface("pvp", { get_teams = function() return teams end })
+    end
+
+    test("puts the mirror lines on the teams, not where the settings say", function()
+        local surface = world.terrain()
+        local centre = { x = 100 * 32, y = 4 * 32 }
+        pretend_pvp(surface, centre, 30 * 32, 2)
+        -- deliberately nothing like the centre, so following is the only way to match
+        world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
+
+        local master = { x = centre.x + 10 * 32, y = centre.y + 3 * 32 }
+        assert.is_false(surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 }),
+            "setup: the master chunk already exists")
+        surface.request_to_generate_chunks({ master.x + 16, master.y + 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        -- a half turn about the centre: reflected on both axes at once
+        local slave = { x = 2 * centre.x - master.x - 32, y = 2 * centre.y - master.y - 32 }
+        assert.is_true(surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 }),
+            "the far side of the centre was never written")
+
+        local matched, mismatched = 0, 0
+        for dx = 0, 31 do
+            for dy = 0, 31 do
+                if surface.get_tile(master.x + dx, master.y + dy).name
+                    == surface.get_tile(slave.x + 31 - dx, slave.y + 31 - dy).name then
+                    matched = matched + 1
+                else
+                    mismatched = mismatched + 1
+                end
+            end
+        end
+        assert.equals(0, mismatched)
+        assert.equals(1024, matched)
+    end)
+
+    test("leaves a four team round alone, which a half turn cannot make fair", function()
+        -- Four teams sit a quarter turn apart. A half turn maps team 1 onto team 3 and
+        -- team 2 onto team 4, so two pairs match and the pairs do not match each other --
+        -- worse than not trying. Until a quarter turn exists, the settings stand.
+        local surface = world.terrain()
+        pretend_pvp(surface, { x = 200 * 32, y = 0 }, 30 * 32, 4)
+        world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
+
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local matched, mismatched = world.compare(surface, master, world.reflection_of(master))
+        assert.equals(0, mismatched, "a four team round was followed anyway")
+        assert.equals(1024, matched)
+    end)
+
+    test("is ignored when the scenario is not running", function()
+        local surface = world.terrain()
+        world.configure({ mirror_x = true, mirror_y = false, x_line = -4, y_line = -4 })
+        assert.is_nil(remote.interfaces["pvp"], "setup: something is pretending to be pvp")
+
+        local master = world.claim(surface)
+        world.generate(surface, master)
+
+        local matched, mismatched = world.compare(surface, master, world.reflection_of(master))
+        assert.equals(0, mismatched, "the settings' own lines stopped being used")
+        assert.equals(1024, matched)
+    end)
+end)

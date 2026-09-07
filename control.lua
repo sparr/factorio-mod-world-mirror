@@ -18,6 +18,60 @@ local mirror = require("lib.mirror")
 ---and the lines can only fall on chunk boundaries anyway. Everything below this point
 ---works in tiles, so the conversion happens here and nowhere else.
 ---@return boolean mirror_x, boolean mirror_y, {x:number, y:number} lines, in tiles
+---Where the PVP scenario wants the mirror lines, or nil if it is not running one this
+---mod can help with.
+---
+---PVP arranges its teams on a circle around a centre it picks at random, and does not
+---expose that centre -- but the spawns are readable from the team forces, and their
+---average is it. Two teams sit diametrically opposite whatever rotation the scenario
+---chose, and a half turn maps one onto the other, which is what mirroring on both axes
+---does. Four teams need a quarter turn, which this mod cannot do, so they are left alone.
+---
+---The reflection lands one tile off: it maps tile x to 2*line-1-x, so a spawn on a chunk
+---boundary reflects to an odd tile and never onto the other spawn exactly. The terrain
+---matches; each base sits one tile differently within it.
+---@param surface LuaSurface
+---@return {x:number, y:number}?
+local function pvp_lines(surface)
+  if not remote.interfaces["pvp"] then return nil end
+  local ok, teams = pcall(remote.call, "pvp", "get_teams")
+  if not ok or type(teams) ~= "table" then return nil end
+
+  local spawns = {}
+  for _, team in pairs(teams) do
+    local force = game.forces[team.name]
+    if not force then return nil end
+    spawns[#spawns + 1] = force.get_spawn_position(surface)
+  end
+  if #spawns ~= 2 then return nil end
+
+  local centre = mirror.centre_of(spawns)
+  if not centre then return nil end
+  return mirror.on_chunk_boundary(centre)
+end
+
+---As above, but worked out once a round rather than once a chunk. PVP clears the surface
+---to start a round, which is the moment the answer changes.
+---@param surface LuaSurface
+---@return {x:number, y:number}?
+local function remembered_pvp_lines(surface)
+  storage.pvp = storage.pvp or {}
+  local remembered = storage.pvp[surface.index]
+  if remembered == nil then
+    remembered = pvp_lines(surface) or false
+    storage.pvp[surface.index] = remembered
+  end
+  return remembered or nil
+end
+
+script.on_event(defines.events.on_surface_cleared, function(event)
+  if storage.pvp then storage.pvp[event.surface_index] = nil end
+end)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function()
+  storage.pvp = nil
+end)
+
 local function current_settings()
   return settings.global['world-mirror-x'].value --[[@as boolean]],
          settings.global['world-mirror-y'].value --[[@as boolean]],
@@ -266,6 +320,15 @@ local function on_chunk_generated(event)
   end
 
   local surface = event.surface
+
+  if settings.global['world-mirror-follow-pvp'].value then
+    local from_pvp = remembered_pvp_lines(surface)
+    if from_pvp then
+      -- a half turn about the teams' centre, which is what makes their ground match
+      lines = from_pvp
+      world_mirror_x, world_mirror_y = true, true
+    end
+  end
   local p1 = event.area.left_top
 
   if mirror.is_slave(p1, world_mirror_x, world_mirror_y, lines) then

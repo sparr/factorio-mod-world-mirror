@@ -221,7 +221,14 @@ describe("on_chunk_boundary", function()
         assert.same({ x = 320, y = -640 }, mirror.on_chunk_boundary({ x = 320, y = -640 }))
     end)
 
-    it("moves one that is not back to the boundary before it", function()
-        assert.same({ x = 320, y = -672 }, mirror.on_chunk_boundary({ x = 340, y = -641 }))
+    it("moves one that is not to the nearest boundary", function()
+        -- 340 is 20 past 320 and 12 short of 352, so 352 wins
+        assert.same({ x = 352, y = -640 }, mirror.on_chunk_boundary({ x = 340, y = -641 }))
+        assert.same({ x = 320, y = -672 }, mirror.on_chunk_boundary({ x = 330, y = -670 }))
+    end)
+
+    it("recovers a centre that landed half a chunk out", function()
+        -- centre_of can be 16 tiles off; the truth is always on a boundary
+        assert.same({ x = 320, y = -640 }, mirror.on_chunk_boundary({ x = 320 - 15, y = -640 + 15 }))
     end)
 end)

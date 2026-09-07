@@ -90,12 +90,18 @@ function mirror.centre_of(spawns)
   return { x = x / count, y = y / count }
 end
 
----Round a point to the chunk boundary at or before it, which is where a mirror line can
----actually sit.
+---Round a point to the nearest chunk boundary, which is where a mirror line can sit.
+---
+---Nearest rather than downwards on purpose: centre_of can land up to half a chunk either
+---side of the truth, and rounding to the nearest boundary puts it back. Exactly half a
+---chunk out is a coin toss, and rare -- two rotations in 3600.
 ---@param point {x:number, y:number}
 ---@return {x:number, y:number}
 function mirror.on_chunk_boundary(point)
-  return { x = math.floor(point.x / 32) * 32, y = math.floor(point.y / 32) * 32 }
+  return {
+    x = math.floor(point.x / 32 + 0.5) * 32,
+    y = math.floor(point.y / 32 + 0.5) * 32,
+  }
 end
 
 return mirror
