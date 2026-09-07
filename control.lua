@@ -14,11 +14,14 @@ local mirror = require("lib.mirror")
 ---Loading them once meant changing an axis or the offset during a game did nothing until
 ---the save was reloaded -- and worse, left a client who joined after the change working
 ---from different numbers than everyone already playing.
----@return boolean mirror_x, boolean mirror_y, number coord_offset in tiles
+---@return boolean mirror_x, boolean mirror_y, {x:number, y:number} lines in tiles
 local function current_settings()
   return settings.global['world-mirror-x'].value --[[@as boolean]],
          settings.global['world-mirror-y'].value --[[@as boolean]],
-         settings.global['world-mirror-chunk-offset'].value --[[@as number]] * 32
+         {
+           x = settings.global['world-mirror-x-line'].value --[[@as number]] * 32,
+           y = settings.global['world-mirror-y-line'].value --[[@as number]] * 32,
+         }
 end
 
 ---Did somebody build this, rather than the map generator growing it?
@@ -226,10 +229,10 @@ end
 ---@param towards {x:number, y:number} unit vector pointing at the neighbour that settled it
 ---@param mirror_x boolean
 ---@param mirror_y boolean
----@param coord_offset number
+---@param lines {x:number, y:number}
 ---@param tiles table[] appended to, so every edge settled at once goes in one write
-local function recopy_edge(surface, master_pos, towards, mirror_x, mirror_y, coord_offset, tiles)
-  for _, slave_pos in ipairs(mirror.locate_slaves(master_pos, mirror_x, mirror_y, coord_offset)) do
+local function recopy_edge(surface, master_pos, towards, mirror_x, mirror_y, lines, tiles)
+  for _, slave_pos in ipairs(mirror.locate_slaves(master_pos, mirror_x, mirror_y, lines)) do
     if surface.is_chunk_generated({x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}) then
       local flip_x = slave_pos.x ~= master_pos.x
       local flip_y = slave_pos.y ~= master_pos.y
@@ -250,7 +253,7 @@ local function recopy_edge(surface, master_pos, towards, mirror_x, mirror_y, coo
 end
 
 local function on_chunk_generated(event)
-  local world_mirror_x, world_mirror_y, coord_offset = current_settings()
+  local world_mirror_x, world_mirror_y, lines = current_settings()
   if not world_mirror_x and not world_mirror_y then
     return
   end
@@ -262,10 +265,9 @@ local function on_chunk_generated(event)
   local surface = event.surface
   local p1 = event.area.left_top
 
-  if mirror.is_slave(p1, world_mirror_x, world_mirror_y, coord_offset) then
+  if mirror.is_slave(p1, world_mirror_x, world_mirror_y, lines) then
     -- slave
-    -- if p1.y==-coord_offset then debug("slave chunk at " .. pos2s(p1)) end
-    local master_pos = mirror.locate_master(p1, world_mirror_x, world_mirror_y, coord_offset)
+    local master_pos = mirror.locate_master(p1, world_mirror_x, world_mirror_y, lines)
     wipe_chunk(surface, p1)
     if surface.is_chunk_generated({x=math.floor(master_pos.x/32), y=math.floor(master_pos.y/32)}) then
       mirror_chunk(surface, master_pos, p1)
@@ -274,11 +276,9 @@ local function on_chunk_generated(event)
     end
   else
     -- master
-    -- if p1.y==-coord_offset then debug("master chunk at " .. pos2s(p1)) end
-    local slaves = mirror.locate_slaves(p1, world_mirror_x, world_mirror_y, coord_offset)
+    local slaves = mirror.locate_slaves(p1, world_mirror_x, world_mirror_y, lines)
     for _,slave_pos in ipairs(slaves) do
       local slave_chunk_pos = {x=math.floor(slave_pos.x/32), y=math.floor(slave_pos.y/32)}
-      -- if p1.y==-coord_offset then debug("copying to slave at " .. pos2s(slave_pos)) end
       if surface.is_chunk_generated(slave_chunk_pos) then
         wipe_chunk(surface, slave_pos)
       end
@@ -291,11 +291,11 @@ local function on_chunk_generated(event)
     local settled = {}
     for _, towards in ipairs({{x=-1,y=0},{x=1,y=0},{x=0,y=-1},{x=0,y=1}}) do
       local neighbour = {x = p1.x + towards.x*32, y = p1.y + towards.y*32}
-      if not mirror.is_slave(neighbour, world_mirror_x, world_mirror_y, coord_offset)
+      if not mirror.is_slave(neighbour, world_mirror_x, world_mirror_y, lines)
         and surface.is_chunk_generated({x=math.floor(neighbour.x/32), y=math.floor(neighbour.y/32)})
       then
         recopy_edge(surface, neighbour, {x = -towards.x, y = -towards.y},
-          world_mirror_x, world_mirror_y, coord_offset, settled)
+          world_mirror_x, world_mirror_y, lines, settled)
       end
     end
     if #settled > 0 then

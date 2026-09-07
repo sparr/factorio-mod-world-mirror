@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.5
 Date: ????
+  Changes:
+    - The mirror lines can be put anywhere, and each axis has its own. The single chunk
+      offset, which could only place both lines the same distance west and north of the
+      origin, is replaced by an east/west line setting and a north/south one. Either can
+      sit on either side of the origin.
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.4
 Date: 2026-09-07

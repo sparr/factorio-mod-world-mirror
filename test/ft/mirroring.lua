@@ -178,7 +178,7 @@ describe("all four quadrants at once", function()
         -- of them outlasts the runner's patience -- which is a performance problem in its
         -- own right, noted for later, not something to hide behind a smaller number here.
         local surface = world.terrain()
-        world.configure({ mirror_x = true, mirror_y = true, chunk_offset = 0 })
+        world.configure({ mirror_x = true, mirror_y = true, x_line = 0, y_line = 0 })
 
         local master = { x = 70 * 32, y = 70 * 32 }
         assert.is_false(surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 }),
@@ -504,10 +504,10 @@ describe("the settings", function()
         -- is north of the Y line. claim() walks rows either side of it, so ask until it
         -- hands back one that qualifies.
         local master
-        repeat master = world.claim(surface) until master.y >= -world.COORD_OFFSET
+        repeat master = world.claim(surface) until master.y >= world.LINES.y
         world.generate(surface, master)
 
-        local reflected_y = -2 * world.COORD_OFFSET - master.y - 32
+        local reflected_y = 2 * world.LINES.y - master.y - 32
         local slave = { x = master.x, y = reflected_y }
         assert.is_true(surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 }),
             "turning on the Y axis mid-game had no effect")
@@ -517,6 +517,41 @@ describe("the settings", function()
             for dy = 0, 31 do
                 if surface.get_tile(master.x + dx, master.y + dy).name
                     == surface.get_tile(slave.x + dx, slave.y + 31 - dy).name then
+                    matched = matched + 1
+                else
+                    mismatched = mismatched + 1
+                end
+            end
+        end
+        assert.equals(0, mismatched)
+        assert.equals(1024, matched)
+    end)
+end)
+
+describe("mirror lines placed anywhere", function()
+    local saved
+    before_each(function() saved = world.snapshot() end)
+    after_each(function() world.restore(saved) end)
+
+    test("work east of the origin, not only west of it", function()
+        -- what PVP needs: its teams sit around a centre that is nowhere near the origin,
+        -- so the lines have to go where the teams are
+        local surface = world.terrain()
+        local line = 40 * 32
+        world.configure({ mirror_x = true, mirror_y = false, x_line = 40 })
+
+        local master = { x = line, y = 0 }
+        assert.is_false(surface.is_chunk_generated({ x = master.x / 32, y = 0 }),
+            "setup: the master chunk already exists")
+        surface.request_to_generate_chunks({ master.x + 16, 16 }, 0)
+        surface.force_generate_chunk_requests()
+
+        local slave = { x = 2 * line - master.x - 32, y = 0 }
+        local matched, mismatched = 0, 0
+        for dx = 0, 31 do
+            for dy = 0, 31 do
+                if surface.get_tile(master.x + dx, dy).name
+                    == surface.get_tile(slave.x + 31 - dx, dy).name then
                     matched = matched + 1
                 else
                     mismatched = mismatched + 1

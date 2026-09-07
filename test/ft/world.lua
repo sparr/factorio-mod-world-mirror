@@ -7,12 +7,13 @@ local world = {}
 --- The shipped defaults, which every fixture but the settings one runs against.
 world.MIRROR_X = true
 world.MIRROR_Y = false
-world.COORD_OFFSET = 4 * 32
+world.LINES = { x = -4 * 32, y = -4 * 32 }
 
 local SETTINGS = {
     mirror_x = "world-mirror-x",
     mirror_y = "world-mirror-y",
-    chunk_offset = "world-mirror-chunk-offset",
+    x_line = "world-mirror-x-line",
+    y_line = "world-mirror-y-line",
 }
 
 ---The settings as they stand, to be handed back to world.restore. Fixtures may write
@@ -27,7 +28,7 @@ function world.restore(saved)
     for key, name in pairs(SETTINGS) do settings.global[name] = { value = saved[key] } end
 end
 
----@param values table mirror_x, mirror_y, chunk_offset -- any subset
+---@param values table mirror_x, mirror_y, x_line, y_line -- any subset
 function world.configure(values)
     for key, value in pairs(values) do
         assert(SETTINGS[key], "no such setting: " .. key)
@@ -71,7 +72,7 @@ end
 function world.claim_slave(surface)
     for candidate = 30, 200 do
         local slave = { x = -candidate * 32, y = 0 }
-        local master = { x = -2 * world.COORD_OFFSET - slave.x - 32, y = slave.y }
+        local master = { x = 2 * world.LINES.x - slave.x - 32, y = slave.y }
         if not surface.is_chunk_generated({ x = slave.x / 32, y = slave.y / 32 })
             and not surface.is_chunk_generated({ x = master.x / 32, y = master.y / 32 })
         then
@@ -140,7 +141,7 @@ end
 ---@param corner {x:number, y:number}
 ---@return {x:number, y:number}
 function world.reflection_of(corner)
-    return { x = -2 * world.COORD_OFFSET - corner.x - 32, y = corner.y }
+    return { x = 2 * world.LINES.x - corner.x - 32, y = corner.y }
 end
 
 ---Compare a chunk with its reflection, tile by tile, east-west reversed.

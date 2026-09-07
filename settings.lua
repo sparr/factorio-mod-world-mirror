@@ -14,10 +14,17 @@ data:extend(
     },
     {
       type = "int-setting",
-      name = "world-mirror-chunk-offset",
+      name = "world-mirror-x-line",
       setting_type = "runtime-global",
-      default_value = 4,
-      minimum_value = 0
+      default_value = -4,
+      order = "c"
+    },
+    {
+      type = "int-setting",
+      name = "world-mirror-y-line",
+      setting_type = "runtime-global",
+      default_value = -4,
+      order = "d"
     },
   }
 )

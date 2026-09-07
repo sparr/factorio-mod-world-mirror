@@ -1,26 +1,29 @@
 --- Where a chunk's reflection lives, with no game attached. Everything that touches a
 --- surface stays in control.lua, so these can be tested without one.
 ---
---- The mirror lines sit `offset` chunks from the origin, at x = -offset*32 and
---- y = -offset*32. Everything at or above a line is a master and is copied; everything
---- below is a slave and is overwritten. A chunk's left-top corner reflects to
---- `-2*offset - corner - 32`: the extra 32 is the chunk's own width, since reflecting a
---- span swaps which end its corner is.
+--- A mirror line is a tile coordinate: `lines.x` is the vertical line, `lines.y` the
+--- horizontal one, and both fall on chunk boundaries. Everything at or beyond a line is a
+--- master and is copied; everything before it is a slave and is overwritten.
+---
+--- A chunk's left-top corner reflects to `2*line - corner - 32`. The extra 32 is the
+--- chunk's own width, since reflecting a span swaps which end its corner is. Tile by tile
+--- that works out as `x -> 2*line - 1 - x`, so the line sits exactly on the boundary
+--- between the tiles either side of it rather than through the middle of one.
 local mirror = {}
 
 ---The left-top corner of the chunk a slave chunk copies from.
 ---@param slave {x:number, y:number} left-top corner of the slave chunk
 ---@param mirror_x boolean
 ---@param mirror_y boolean
----@param coord_offset number distance from the origin to the mirror lines, in tiles
+---@param lines {x:number, y:number} where the mirror lines sit, in tiles
 ---@return {x:number, y:number}
-function mirror.locate_master(slave, mirror_x, mirror_y, coord_offset)
+function mirror.locate_master(slave, mirror_x, mirror_y, lines)
   local master = { x = slave.x, y = slave.y }
-  if mirror_x and slave.x < -coord_offset then
-    master.x = -2 * coord_offset - slave.x - 32
+  if mirror_x and slave.x < lines.x then
+    master.x = 2 * lines.x - slave.x - 32
   end
-  if mirror_y and slave.y < -coord_offset then
-    master.y = -2 * coord_offset - slave.y - 32
+  if mirror_y and slave.y < lines.y then
+    master.y = 2 * lines.y - slave.y - 32
   end
   return master
 end
@@ -30,14 +33,14 @@ end
 ---@param master {x:number, y:number} left-top corner of the master chunk
 ---@param mirror_x boolean
 ---@param mirror_y boolean
----@param coord_offset number
+---@param lines {x:number, y:number}
 ---@return {x:number, y:number}[]
-function mirror.locate_slaves(master, mirror_x, mirror_y, coord_offset)
+function mirror.locate_slaves(master, mirror_x, mirror_y, lines)
   local slaves = {}
-  local reflected_x = -2 * coord_offset - master.x - 32
-  local reflected_y = -2 * coord_offset - master.y - 32
-  local past_x = master.x >= -coord_offset
-  local past_y = master.y >= -coord_offset
+  local reflected_x = 2 * lines.x - master.x - 32
+  local reflected_y = 2 * lines.y - master.y - 32
+  local past_x = master.x >= lines.x
+  local past_y = master.y >= lines.y
   if mirror_x and past_x then
     slaves[#slaves + 1] = { x = reflected_x, y = master.y }
   end
@@ -54,11 +57,11 @@ end
 ---@param corner {x:number, y:number}
 ---@param mirror_x boolean
 ---@param mirror_y boolean
----@param coord_offset number
+---@param lines {x:number, y:number}
 ---@return boolean
-function mirror.is_slave(corner, mirror_x, mirror_y, coord_offset)
-  return (mirror_x and corner.x < -coord_offset)
-      or (mirror_y and corner.y < -coord_offset)
+function mirror.is_slave(corner, mirror_x, mirror_y, lines)
+  return (mirror_x and corner.x < lines.x)
+      or (mirror_y and corner.y < lines.y)
 end
 
 return mirror
