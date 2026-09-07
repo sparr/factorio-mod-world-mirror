@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.4
-Date: ????
+Date: 2026-09-07
   Bugfixes:
     - The seams between chunks match now. A strip of tiles along a chunk edge could come
       out wrong, most often water where the other half has land, and stayed wrong.
