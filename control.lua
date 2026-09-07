@@ -158,7 +158,7 @@ local function mirror_chunk(surface, master_pos, slave_pos)
   -- temp solution is to just regenerate new decoratives instead
   -- get a list of all known autoplace-able decorative names
   local decorative_names = {}
-  for k,v in pairs(game.decorative_prototypes) do
+  for k,v in pairs(prototypes.decorative) do
     if v.autoplace_specification then
       decorative_names[#decorative_names+1] = k
     end

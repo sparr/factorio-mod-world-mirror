@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.0
+Date: 2026-09-07
+  Other:
+    - Update for Factorio 2.1
+  Bugfixes:
+    - Stop crashing the moment a chunk is mirrored: 2.0 moved the prototype tables off
+      game, so game.decorative_prototypes no longer exists
+---------------------------------------------------------------------------------------------------
 Version: 1.1.1
 Date: 2022-01-01
   Bugfixes:
